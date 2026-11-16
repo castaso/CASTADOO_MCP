@@ -99,6 +99,17 @@ def bad(msg: str) -> None:
     failures.append(msg)
 
 
+# Hosted-product promo surface. Deliberately NOT the bare "erpipe" token, because
+# a provenance link to the upstream repo is required by the license and NOTICE.
+PROMO_MARKERS = (
+    "erpipe.com",
+    "mcp.erpipe.com",
+    "ERPipe is the managed",
+    "ERPipe hosted",
+    "erpipe-org/erpipe",
+)
+
+
 def check(cond: bool, msg: str) -> bool:
     (ok if cond else bad)(msg)
     return cond
@@ -115,9 +126,16 @@ def _temp_root() -> Path:
 
 
 def clone_at(rev: str) -> Path:
-    """Local clone of this repo checked out at `rev`, in a temp sibling dir."""
+    """Local clone of this repo checked out at `rev`, in a temp sibling dir.
+
+    ``--no-hardlinks`` is essential: this filesystem refuses the hardlinks that
+    ``--local`` uses by default (``fatal: failed to create link ... Function not
+    implemented``), and ``safe.directory=*`` keeps git from rejecting the clone
+    over the ownership guard.
+    """
     path = _temp_root()
-    res = _run(["git", "clone", "--local", "--quiet", str(ROOT), str(path)])
+    res = _run(["git", "-c", "safe.directory=*", "clone", "--no-hardlinks",
+                "--local", "--quiet", str(ROOT), str(path)])
     if res.returncode != 0:
         raise RuntimeError(f"local clone failed: {res.stderr.strip()[:200]}")
     git("checkout", "--quiet", "--detach", rev, cwd=path)
@@ -240,25 +258,34 @@ def g3() -> None:
 
 def g4() -> None:
     """No hosted-product promo survives outside the provenance files."""
-    allowed = {"NOTICE.md", "LICENSE", "CHANGELOG.md", "TRADEMARKS.md"}
-    provenance_ok = {
-        'Upstream = "https://github.com/erpipe-org/mcp-odoo"',
-    }
     offenders = []
     for rel in tracked(BRANCH):
-        if rel in allowed:
-            continue
         if not rel.lower().endswith((".md", ".py", ".toml", ".json", ".yml",
                                      ".yaml", ".html", ".txt", ".in", ".mdc")):
             continue
-        for i, line in enumerate(show(BRANCH, rel).splitlines(), 1):
-            if line.strip() in provenance_ok:
-                continue
-            if re.search(r"erpipe", line, re.IGNORECASE):
-                offenders.append(f"{rel}:{i}")
+        body = show(BRANCH, rel)
+        low = body.lower()
+        for marker in PROMO_MARKERS:
+            if marker.lower() in low:
+                offenders.append(f"{rel}: {marker}")
     check(not offenders,
-          f"zero promo references outside {sorted(allowed)}"
-          + (f" — {len(offenders)} at {offenders[:6]}" if offenders else ""))
+          "zero hosted-product promo references anywhere in the tree"
+          + (f" — {len(offenders)}: {offenders[:6]}" if offenders else ""))
+
+    # The only surviving upstream mentions must be provenance links.
+    legal = {"NOTICE.md", "LICENSE", "CHANGELOG.md", "TRADEMARKS.md"}
+    stray = []
+    for rel in tracked(BRANCH):
+        if rel in legal or not rel.lower().endswith((".md", ".toml", ".py")):
+            continue
+        for i, line in enumerate(show(BRANCH, rel).splitlines(), 1):
+            if re.search(r"erpipe", line, re.IGNORECASE) and not (
+                "github.com/erpipe-org/mcp-odoo" in line
+            ):
+                stray.append(f"{rel}:{i}: {line.strip()[:80]}")
+    check(not stray,
+          "remaining 'erpipe' mentions are upstream provenance links only"
+          + (f" — {stray[:4]}" if stray else ""))
 
 
 def g5() -> None:
@@ -347,6 +374,9 @@ def g8() -> None:
     check("https://github.com/erpipe-org/mcp-odoo" in notice, "NOTICE.md names upstream")
     check("not affiliated" in notice.lower(), "NOTICE.md disclaims affiliation")
     check("odoo_mcp" in notice, "NOTICE.md documents the preserved import package")
+    # The provenance URL must not have been rewritten to point at this fork.
+    check(notice.count("https://github.com/erpipe-org/mcp-odoo") >= 2,
+          "NOTICE.md keeps upstream URLs for attribution")
     check("Odoo S.A." in show(BRANCH, "TRADEMARKS.md"), "TRADEMARKS.md attributes Odoo S.A.")
 
 
@@ -356,7 +386,10 @@ def g9() -> None:
     check("CASTADOO MCP" in readme, "README is CASTADOO-branded")
     check(f"uvx {DIST}" in readme or f"pip install {DIST}" in readme,
           f"README documents installing {DIST}")
-    check("erpipe" not in readme.lower(), "README carries no promo")
+    low = readme.lower()
+    hits = [m for m in PROMO_MARKERS if m.lower() in low]
+    check(not hits, "README carries no hosted-product promo"
+          + (f" — {hits}" if hits else ""))
     check("NOTICE.md" in readme, "README links NOTICE.md")
     check("SYNCING.md" in readme, "README links SYNCING.md")
     check("## Highlights" in readme, "upstream body sections preserved (syncable)")

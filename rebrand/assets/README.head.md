@@ -1,3 +1,7 @@
+<h1 align="center">CASTADOO MCP</h1>
+
+<!-- mcp-name: io.github.castaso/castadoo-mcp -->
+
 <p align="center">
   <strong>CASTADOO MCP — the free AI layer for Odoo. Any edition, any version.</strong><br>
   Odoo's built-in AI is Enterprise-only. CASTADOO MCP gives Community and Enterprise 16+ the same power for $0, with the LLM you already use (Claude, GPT, Gemini, DeepSeek, Ollama).<br>

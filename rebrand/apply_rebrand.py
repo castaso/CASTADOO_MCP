@@ -93,14 +93,12 @@ DEDICATED = {
     "README.md", "CHANGELOG.md",
 }
 
-# Tooling must never rewrite itself.
-TOOLING = {
-    "rebrand/apply_rebrand.py", "rebrand/verify.py",
-    "rebrand/hook_pre_push.py", "rebrand/sync_upstream.py",
-    "rebrand/hooks/pre-push", "rebrand/assets/README.head.md",
-}
+# Tooling must never rewrite itself. The WHOLE rebrand/ tree is protected:
+# its assets are the source files that stage 5 copies into the repo, so letting
+# the identity pass touch them would silently corrupt the generator's input.
+TOOLING_PREFIX = "rebrand/"
 
-SKIP_ALL = AUTHORED | DEDICATED | TOOLING | {"GATES.md", "PLAN.md"}
+SKIP_ALL = AUTHORED | DEDICATED | {"GATES.md", "PLAN.md"}
 
 DELETE_PATHS = [
     "site",                                       # upstream marketing deck
@@ -190,6 +188,8 @@ def iter_text_files(root: Path):
             continue
         rel = path.relative_to(root).as_posix()
         if rel.startswith(".git/") or "/.git/" in rel:
+            continue
+        if rel.startswith(TOOLING_PREFIX):
             continue
         if rel in SKIP_ALL:
             continue

@@ -6,22 +6,25 @@
 conflict on the next upstream sync, which is precisely the failure this
 repository is structured to prevent. This hook refuses such a push.
 
-Installed via ``git config core.hooksPath rebrand/hooks``; the hook shim in
+Installed via ``git config core.hooksPath rebrand/hooks``; the shim in
 ``rebrand/hooks/pre-push`` calls this file.
 
-    python rebrand/hook_pre_push.py --self-test   # verify the guard logic
-    python rebrand/hook_pre_push.py <remote> <url>  # real pre-push invocation
+    python rebrand/hook_pre_push.py --self-test    # prove the guard behaviour
+    python rebrand/hook_pre_push.py <remote> <url> # real pre-push invocation
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 GENERATED_MARKER = "[generated-rebrand]"
 BRANCH = "refs/heads/rebrand/CASTADOO_MCP"
-TOOLING = "refs/heads/tooling/rebrand"
+BRANCH_NAME = "rebrand/CASTADOO_MCP"
+TOOLING = "tooling/rebrand"
 ZERO = "0" * 40
 
 
@@ -32,113 +35,156 @@ def git(*args: str) -> str:
     ).stdout
 
 
-def commit_bodies(rev_range: str) -> list[tuple[str, str]]:
-    """Return [(sha, full message)] for a revision range."""
-    out = git("log", "--format=%H%x00%B%x00%x00", rev_range)
-    result = []
-    for chunk in out.split("\0\0"):
-        chunk = chunk.strip("\0 \n")
-        if not chunk:
-            continue
-        sha, _, body = chunk.partition("\0")
-        result.append((sha.strip(), body))
-    return result
+def rev_parse(rev: str) -> str:
+    """Resolve a revision to a full sha, or '' when it does not exist."""
+    res = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    return res.stdout.strip() if res.returncode == 0 else ""
 
 
 def commit_has_marker(sha: str) -> bool:
     return GENERATED_MARKER in git("log", "-1", "--format=%B", sha)
 
 
-def is_generated_commit(sha: str) -> bool:
-    """A generated commit has the marker AND regenerates to the same tree.
-
-    Tree equality is the real test; the marker is the fast path. We check the
-    marker here only — full regeneration is `verify.py`'s job and too slow for
-    a hook. A commit lacking the marker is refused without further work.
-    """
-    return commit_has_marker(sha)
-
-
 def guard(remote: str, local_ref: str, local_sha: str) -> tuple[bool, str]:
+    """Decide whether a push of `local_ref` at `local_sha` may proceed."""
     if local_ref != BRANCH:
-        return True, ""
+        return True, ""          # every other branch is unconstrained
     if local_sha == ZERO:
-        return True, ""  # deletion, allowed
+        return True, ""          # branch deletion
 
-    # Every commit being introduced must be generated. Compare against the
-    # remote-tracking base when it exists, else walk the whole branch.
-    base = f"refs/remotes/{remote}/rebrand/CASTADOO_MCP"
-    if git("rev-parse", "--verify", "--quiet", base).strip():
-        rng = f"{base}..{local_sha}"
-    else:
-        rng = local_sha
+    if not rev_parse(local_sha):
+        # Fail closed: if the object cannot be inspected we cannot certify it.
+        return False, (
+            f"refusing to push to {BRANCH_NAME}: cannot resolve {local_sha[:10]} "
+            f"to a commit, so the {GENERATED_MARKER} marker cannot be verified."
+        )
 
-    commits = commit_bodies(rng)
-    offenders = [sha for sha, _ in commits if not is_generated_commit(sha)]
+    # Prefer the range since the remote-tracking base; that is what is actually
+    # being introduced. Fall back to the single tip commit for a first push.
+    base = rev_parse(f"refs/remotes/{remote}/{BRANCH_NAME}")
+    rng = f"{base}..{local_sha}" if base else local_sha
+    shas = [ln.strip() for ln in git("rev-list", rng).splitlines() if ln.strip()]
+    if not shas:
+        return True, ""          # nothing new to introduce
+
+    offenders = [sha for sha in shas if not commit_has_marker(sha)]
     if not offenders:
         return True, ""
 
-    detail = "\n".join(f"  {sha[:10]}  {git('log','-1','--format=%s',sha).strip()}"
-                       for sha in offenders[:5])
-    msg = (
-        f"refusing to push to {local_ref.removeprefix('refs/heads/')}:\n"
+    detail = "\n".join(
+        f"  {sha[:10]}  {git('log', '-1', '--format=%s', sha).strip()}"
+        for sha in offenders[:5]
+    )
+    return False, (
+        f"refusing to push to {BRANCH_NAME}:\n"
         f"{len(offenders)} commit(s) lack the {GENERATED_MARKER} marker:\n"
         f"{detail}\n\n"
         f"That branch is GENERATED, never hand-edited. Put your change in\n"
-        f"rebrand/apply_rebrand.py or rebrand/assets/ on '{TOOLING.removeprefix('refs/heads/')}',\n"
-        f"then regenerate:\n\n"
-        f"  git checkout -B rebrand/CASTADOO_MCP upstream/main\n"
-        f"  git checkout tooling/rebrand -- rebrand/\n"
+        f"rebrand/apply_rebrand.py or rebrand/assets/ on '{TOOLING}', then\n"
+        f"regenerate:\n\n"
+        f"  git checkout -B {BRANCH_NAME} upstream/main\n"
+        f"  git checkout {TOOLING} -- rebrand/\n"
         f"  python rebrand/apply_rebrand.py\n"
-        f"  git add -A && git commit -m 'chore(rebrand): sync upstream@<sha> {GENERATED_MARKER}'\n\n"
+        f"  git add -A && git commit -m "
+        f"'chore(rebrand): sync upstream@<sha> {GENERATED_MARKER}'\n\n"
         f"Override once with: git push --no-verify\n"
     )
-    return False, msg
+
+
+# ---------------------------------------------------------------------------
+# Self-test: build a throwaway repo and assert the guard's real behaviour.
+# ---------------------------------------------------------------------------
+
+def _init_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q", "-b", BRANCH_NAME, str(path)], check=True)
+    for key, value in (("user.email", "hook@test.local"),
+                       ("user.name", "hook test"),
+                       ("commit.gpgsign", "false")):
+        subprocess.run(["git", "-C", str(path), "config", key, value], check=True)
+
+
+def _commit(path: Path, message: str) -> str:
+    (path / "f.txt").write_text(message, encoding="utf-8")
+    subprocess.run(["git", "-C", str(path), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(path), "commit", "-q", "-m", message], check=True)
+    return subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
 
 
 def self_test() -> int:
-    """Prove the guard accepts generated refs and rejects hand-edited ones."""
-    ok = True
+    """Prove each guard branch against a real repository, not a mock."""
+    results: list[tuple[bool, str]] = []
+    original = Path.cwd()
 
-    # Non-rebrand refs always pass.
-    passed, _ = guard("origin", "refs/heads/main", "a" * 40)
-    ok &= passed
-    print(f"  {'ok  ' if passed else 'FAIL'} non-rebrand ref is allowed")
+    tmp = Path(tempfile.mkdtemp(prefix="castadoo-hook-"))
+    try:
+        _init_repo(tmp)
+        os.chdir(tmp)
 
-    # Branch deletion passes.
-    passed, _ = guard("origin", BRANCH, ZERO)
-    ok &= passed
-    print(f"  {'ok  ' if passed else 'FAIL'} rebrand deletion is allowed")
+        # 1. Generated commit (has the marker) is accepted.
+        good = _commit(tmp, f"chore(rebrand): overlay {GENERATED_MARKER}")
+        passed, _ = guard("origin", BRANCH, good)
+        results.append((passed, "marked commit is accepted"))
 
-    # A ref that does not exist cannot be a hand-edit; guard must not crash.
-    passed, msg = guard("origin", BRANCH, "b" * 40)
-    print(f"  {'ok  ' if isinstance(passed, bool) else 'FAIL'} "
-          f"guard evaluates a rebrand ref (accepted={passed})")
+        # 2. Hand-edited commit (no marker) is refused.
+        bad_sha = _commit(tmp, "fix: hand-edited on the generated branch")
+        passed, msg = guard("origin", BRANCH, bad_sha)
+        results.append((not passed and "refusing to push" in msg,
+                        "unmarked commit is refused"))
 
-    # The core assertion: a commit without the marker is refused.
-    real = git("rev-parse", "--verify", "--quiet", "HEAD").strip()
-    if real:
-        has = commit_has_marker(real)
-        expect = not has
-        ok &= (passed is not True) or expect
-        print(f"  {'ok  ' if True else 'FAIL'} marker detection on HEAD "
-              f"(marker present={has})")
+        # 3. A pinned full branch range catches a buried hand-edit, not just
+        #    the tip. Guard is invoked on the tip; the range walk must see both.
+        subprocess.run(["git", "update-ref", f"refs/remotes/origin/{BRANCH_NAME}",
+                        good], check=True)
+        passed, msg = guard("origin", BRANCH, bad_sha)
+        results.append((not passed and "1 commit(s) lack" in msg,
+                        "range walk reports exactly the unmarked commit"))
 
-    # Marker string must match what the generator writes.
+        # 4. Other branches are unconstrained.
+        passed, _ = guard("origin", "refs/heads/main", bad_sha)
+        results.append((passed, "non-rebrand ref is allowed"))
+
+        # 5. Branch deletion is allowed.
+        passed, _ = guard("origin", BRANCH, ZERO)
+        results.append((passed, "rebrand deletion is allowed"))
+
+        # 6. An unresolvable sha fails closed rather than passing silently.
+        passed, msg = guard("origin", BRANCH, "b" * 40)
+        results.append((not passed and "cannot resolve" in msg,
+                        "unresolvable sha fails closed"))
+    finally:
+        os.chdir(original)
+        subprocess.run(["git", "-C", str(tmp), "config", "gc.auto", "0"],
+                       capture_output=True)
+        import shutil
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    # 7. Hook and generator must agree on the marker literal.
     gen = (Path(__file__).resolve().parent / "apply_rebrand.py").read_text(encoding="utf-8")
-    present = f'GENERATED_MARKER = "{GENERATED_MARKER}"' in gen
-    ok &= present
-    print(f"  {'ok  ' if present else 'FAIL'} generator and hook share the marker literal")
+    shared = f'GENERATED_MARKER = "{GENERATED_MARKER}"' in gen
+    results.append((shared, "generator and hook share the marker literal"))
 
-    return 0 if ok else 1
+    failures = 0
+    for passed, label in results:
+        print(f"  {'ok  ' if passed else 'FAIL'} {label}")
+        if not passed:
+            failures += 1
+    print(f"  self-test: {len(results) - failures}/{len(results)} passed")
+    return 0 if failures == 0 else 1
 
 
 def main(argv: list[str]) -> int:
     if "--self-test" in argv:
         return self_test()
 
-    # Real pre-push: stdin lines are "<local_ref> <local_sha> <remote_ref> <remote_sha>".
-    stdin = sys.stdin.read() if not sys.stdin.isatty() else ""
+    # Real pre-push: stdin lines are
+    #   "<local_ref> <local_sha> <remote_ref> <remote_sha>"
+    stdin = "" if sys.stdin.isatty() else sys.stdin.read()
     for line in stdin.splitlines():
         parts = line.split()
         if len(parts) < 4:
