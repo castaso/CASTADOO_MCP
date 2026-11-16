@@ -5,7 +5,13 @@
 # commits to the generated rebrand branch. Installed by:
 #     git config core.hooksPath rebrand/hooks
 #
-# Windows note: python3 may not exist on PATH; fall back to python.
+# Interpreter selection is deliberately defensive. On Windows, `python3` often
+# resolves to the Microsoft Store execution-alias stub, which *exists* on PATH
+# but aborts when run. So each candidate is probed by actually executing it, not
+# by `command -v`.
+#
+# Failing to find a working interpreter must not silently allow a bad push: if
+# the rebrand branch is among the refs being pushed, we refuse instead.
 
 set -u
 
@@ -17,11 +23,53 @@ if [ ! -f "$hook" ]; then
   exit 0
 fi
 
-if command -v python3 >/dev/null 2>&1; then
-  exec python3 "$hook" "$@"
-elif command -v python >/dev/null 2>&1; then
-  exec python "$hook" "$@"
+# Is the generated branch part of this push?
+rebrand_push=0
+if [ ! -t 0 ]; then
+  stdin_copy=$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/castadoo-prepush.$$")
+  cat > "$stdin_copy"
+  if grep -q 'refs/heads/rebrand/CASTADOO_MCP' "$stdin_copy" 2>/dev/null; then
+    rebrand_push=1
+  fi
 else
-  echo "pre-push: no python interpreter found; skipping rebrand guard" >&2
+  stdin_copy=""
+fi
+
+find_python() {
+  for cand in python3 python py; do
+    if command -v "$cand" >/dev/null 2>&1; then
+      # Probe by execution: the Store stub passes `command -v` but fails here.
+      if "$cand" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' \
+           >/dev/null 2>&1; then
+        echo "$cand"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
+py=$(find_python) || py=""
+
+if [ -z "$py" ]; then
+  if [ "$rebrand_push" -eq 1 ]; then
+    echo "pre-push: no working Python interpreter found, and this push targets" >&2
+    echo "          the generated rebrand branch. Refusing, because the" >&2
+    echo "          [generated-rebrand] marker cannot be verified." >&2
+    echo "          Install Python 3.8+ or push with: git push --no-verify" >&2
+    [ -n "$stdin_copy" ] && rm -f "$stdin_copy"
+    exit 1
+  fi
+  echo "pre-push: no working Python interpreter found; skipping rebrand guard" >&2
+  [ -n "$stdin_copy" ] && rm -f "$stdin_copy"
   exit 0
 fi
+
+if [ -n "$stdin_copy" ]; then
+  "$py" "$hook" "$@" < "$stdin_copy"
+  rc=$?
+  rm -f "$stdin_copy"
+  exit $rc
+fi
+
+exec "$py" "$hook" "$@"
