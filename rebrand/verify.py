@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -66,13 +67,18 @@ def _run(cmd: list[str], cwd: Path | None = None, timeout: int | None = None):
     )
 
 
-def git(*args: str, cwd: Path | None = None) -> str:
+def git(*args: str, cwd: Path | None = None, retries: int = 0) -> str:
     # safe.directory=* keeps git from refusing freshly cloned/checkouted dirs
     # on filesystems that do not record ownership (common on Windows).
-    res = _run(["git", "-c", "safe.directory=*", *args], cwd=cwd)
-    if res.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} failed: {res.stderr.strip()}")
-    return res.stdout
+    last = ""
+    for attempt in range(retries + 1):
+        res = _run(["git", "-c", "safe.directory=*", *args], cwd=cwd)
+        if res.returncode == 0:
+            return res.stdout
+        last = res.stderr.strip()
+        if attempt < retries:
+            time.sleep(0.4)
+    raise RuntimeError(f"git {' '.join(args)} failed: {last}")
 
 
 def git_ok(*args: str, cwd: Path | None = None) -> tuple[bool, str]:
@@ -140,13 +146,29 @@ def clone_at(rev: str) -> Path:
                 "--local", "--quiet", str(ROOT), str(path)])
     if res.returncode != 0:
         raise RuntimeError(f"local clone failed: {res.stderr.strip()[:200]}")
-    git("checkout", "--detach", sha, cwd=path)
+    git("checkout", "--detach", sha, cwd=path, retries=3)
     return path
 
 
 def materialize_tooling(path: Path) -> None:
-    """Copy rebrand/ from the tooling branch into a clone (script + assets)."""
-    git("checkout", TOOLING, "--", "rebrand", cwd=path)
+    """Copy rebrand/ from the tooling branch into a clone (script + assets).
+
+    A local clone only has remote-tracking refs (``origin/*``) plus one checked
+    out branch, so the tooling branch must be addressed through ``origin/``.
+    """
+    cached = rev_parse(path, f"origin/{TOOLING}") or rev_parse(path, TOOLING)
+    if not cached:
+        raise RuntimeError(
+            f"cannot resolve {TOOLING} in the clone; the tooling branch must be "
+            f"pushed/fetched before the rebrand can be regenerated"
+        )
+    git("checkout", cached, "--", "rebrand", cwd=path)
+
+
+def rev_parse(cwd: Path, rev: str) -> str:
+    res = _run(["git", "-c", "safe.directory=*", "rev-parse", "--verify", "--quiet",
+                f"{rev}^{{commit}}"], cwd=cwd)
+    return res.stdout.strip() if res.returncode == 0 else ""
 
 
 def rebrand_clone() -> Path:
