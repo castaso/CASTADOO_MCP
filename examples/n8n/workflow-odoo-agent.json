@@ -1,6 +1,6 @@
 {
   "id": "OdooMcpAgentDemo",
-  "name": "Odoo Agent (odoo-mcp)",
+  "name": "Odoo Agent (castadoo-mcp)",
   "nodes": [
     {
       "parameters": {},

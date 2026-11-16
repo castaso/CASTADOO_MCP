@@ -1,7 +1,7 @@
-# odoo-mcp Client & Framework Examples
+# castadoo-mcp Client & Framework Examples
 
 Copy-paste-runnable integrations for the most common MCP clients and agent
-frameworks. Every example talks to the same `odoo-mcp` server — pick the
+frameworks. Every example talks to the same `castadoo-mcp` server — pick the
 transport that matches your client, replace the connection values, run.
 
 ## Transport matrix
@@ -19,10 +19,10 @@ transport that matches your client, replace the connection values, run.
 Start the HTTP transport when your client needs it:
 
 ```bash
-odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 ```
 
-stdio needs no flags — clients launch `uvx odoo-mcp` themselves.
+stdio needs no flags — clients launch `uvx castadoo-mcp` themselves.
 
 ## Multiple Odoo instances
 
@@ -45,7 +45,7 @@ shows what is available.
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://mycompany.odoo.com",
         "ODOO_DB": "mycompany",
@@ -64,7 +64,7 @@ shows what is available.
 ```toml
 [mcp_servers.odoo]
 command = "uvx"
-args = ["odoo-mcp"]
+args = ["castadoo-mcp"]
 
 [mcp_servers.odoo.env]
 ODOO_URL = "https://mycompany.odoo.com"

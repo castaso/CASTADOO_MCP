@@ -2,8 +2,8 @@
 
 ## Fastest path: the .mcpb bundle (one-click, local)
 
-Every release ships an `odoo-mcp-<version>.mcpb` asset on the
-[GitHub releases page](https://github.com/erpipe-org/mcp-odoo/releases).
+Every release ships an `castadoo-mcp-<version>.mcpb` asset on the
+[GitHub releases page](https://github.com/castaso/CASTADOO_MCP/releases).
 Double-click it (or drag it into Claude Desktop → Settings → Extensions),
 fill in your Odoo URL, database, username, and API key in the dialog, and
 you're done — no JSON editing, no terminal. The bundle launches the server
@@ -15,9 +15,9 @@ Prefer manual configuration, or connecting to a *remote* server? Read on.
 
 ---
 
-This guide explains how to expose `odoo-mcp` as a remote MCP server and connect
+This guide explains how to expose `castadoo-mcp` as a remote MCP server and connect
 it to Claude Desktop or claude.ai as a custom connector. It uses the Streamable
-HTTP transport and the OAuth 2.1 resource-server mode that ship in `odoo-mcp`
+HTTP transport and the OAuth 2.1 resource-server mode that ship in `castadoo-mcp`
 v0.7.0+.
 
 **When to use this guide:** You want Claude Desktop or claude.ai to reach an
@@ -39,7 +39,7 @@ Claude Desktop / claude.ai
   Reverse proxy (nginx / Caddy)  ←— TLS termination
         |  HTTP
         v
-  odoo-mcp  (--transport streamable-http)
+  castadoo-mcp  (--transport streamable-http)
         |  XML-RPC or JSON-2
         v
   Odoo server
@@ -50,12 +50,12 @@ OAuth flow (when enabled):
 ```
 Claude → Authorization Server (Keycloak / Auth0 / Authentik)
        → bearer token
-       → odoo-mcp validates token via RFC 7662 introspection
+       → castadoo-mcp validates token via RFC 7662 introspection
 ```
 
 ---
 
-## 1. Start odoo-mcp in HTTP mode
+## 1. Start castadoo-mcp in HTTP mode
 
 ### Environment variables
 
@@ -90,7 +90,7 @@ export ODOO_DB="mycompany"
 export ODOO_USERNAME="bot@mycompany.com"
 export ODOO_PASSWORD="mypassword"
 
-odoo-mcp \
+castadoo-mcp \
   --transport streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -113,7 +113,7 @@ docker run --rm \
   -e MCP_HTTP_HOST=0.0.0.0 \
   -e MCP_HTTP_PORT=8000 \
   -e MCP_ALLOW_REMOTE_HTTP=1 \
-  ghcr.io/erpipe-org/mcp-odoo:latest \
+  ghcr.io/castaso/castadoo-mcp:latest \
   --transport streamable-http \
   --host 0.0.0.0 \
   --port 8000 \
@@ -166,14 +166,14 @@ server {
 }
 ```
 
-Set `MCP_ALLOWED_HOSTS=mcp.example.com` when starting odoo-mcp to lock down
+Set `MCP_ALLOWED_HOSTS=mcp.example.com` when starting castadoo-mcp to lock down
 the Host header allowlist.
 
 ---
 
 ## 3. DNS-rebinding protection
 
-`odoo-mcp` validates the `Host` header on HTTP transports by default
+`castadoo-mcp` validates the `Host` header on HTTP transports by default
 (via MCPServer's transport security middleware). When a reverse
 proxy is in front, the `Host` header forwarded to the server must match an
 allowed value.
@@ -181,7 +181,7 @@ allowed value.
 Add the public hostname to the allowlist:
 
 ```bash
-odoo-mcp \
+castadoo-mcp \
   --transport streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -234,11 +234,11 @@ export ODOO_PASSWORD="mypassword"
 export ODOO_MCP_AUTH_ISSUER_URL="https://auth.example.com/realms/myrealm"
 export ODOO_MCP_AUTH_INTROSPECTION_URL="https://auth.example.com/realms/myrealm/protocol/openid-connect/token/introspect"
 export ODOO_MCP_AUTH_RESOURCE_URL="https://mcp.example.com/mcp"
-export ODOO_MCP_AUTH_CLIENT_ID="odoo-mcp-resource"
+export ODOO_MCP_AUTH_CLIENT_ID="castadoo-mcp-resource"
 export ODOO_MCP_AUTH_CLIENT_SECRET="my-client-secret"
 export ODOO_MCP_AUTH_REQUIRED_SCOPES="odoo:read"
 
-odoo-mcp \
+castadoo-mcp \
   --transport streamable-http \
   --host 127.0.0.1 \
   --port 8000 \
@@ -321,7 +321,7 @@ Before adding the connector, confirm the server is reachable:
 curl -s https://mcp.example.com/mcp/../health  # not a built-in endpoint
 
 # Use the built-in health flag instead (run locally before proxy):
-odoo-mcp --transport streamable-http --health
+castadoo-mcp --transport streamable-http --health
 
 # Inspect tools via MCP Inspector
 npx --yes @modelcontextprotocol/inspector@2 --cli \
@@ -381,7 +381,7 @@ the server refuses to start. Set:
 ```bash
 MCP_ALLOW_REMOTE_HTTP=1
 # or
-odoo-mcp --allow-remote-http ...
+castadoo-mcp --allow-remote-http ...
 ```
 
 This flag is intentionally explicit: it exists to prevent accidental exposure.

@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ToolResponse(BaseModel):
-    """Common envelope shared by every odoo-mcp tool."""
+    """Common envelope shared by every castadoo-mcp tool."""
 
     model_config = ConfigDict(extra="allow")
 

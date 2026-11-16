@@ -1,6 +1,6 @@
 # Security Policy
 
-Odoo MCP connects AI clients to business data. Treat every deployment as sensitive.
+CASTADOO MCP connects AI clients to business data. Treat every deployment as sensitive.
 
 ## Supported versions
 

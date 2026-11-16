@@ -1,4 +1,4 @@
-"""Stable API surface for third-party odoo-mcp tool plugins.
+"""Stable API surface for third-party castadoo-mcp tool plugins.
 
 A plugin is a normal Python package exposing an entry point in the
 ``odoo_mcp.tools`` group whose target is a ``register(api)`` callable::
@@ -53,7 +53,7 @@ def redact_records(
 
 
 def error_envelope(tool_name: str, error: Exception | str) -> Dict[str, Any]:
-    """The standard failure envelope every odoo-mcp tool returns."""
+    """The standard failure envelope every castadoo-mcp tool returns."""
     return {"success": False, "tool": tool_name, "error": str(error)}
 
 

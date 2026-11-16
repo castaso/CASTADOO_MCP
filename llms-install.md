@@ -1,17 +1,17 @@
-# odoo-mcp — installation guide for AI agents
+# castadoo-mcp — installation guide for AI agents
 
 This file is written for AI agents (Claude Code, Cline, Cursor, Codex, and
-similar) installing the `odoo-mcp` MCP server on behalf of a user. It is
+similar) installing the `castadoo-mcp` MCP server on behalf of a user. It is
 self-contained — you do not need to read the rest of the repository.
 
-`odoo-mcp` turns any Odoo 16+ database into a Model Context Protocol server
+`castadoo-mcp` turns any Odoo 16+ database into a Model Context Protocol server
 using only existing credentials. No Odoo-side module, no admin access.
-Human-oriented documentation: https://github.com/erpipe-org/mcp-odoo
+Human-oriented documentation: https://github.com/castaso/CASTADOO_MCP
 
 ## Prerequisites
 
 - Python 3.10+ with `uv`/`uvx` (preferred) or `pip`; or Docker
-  (`ghcr.io/erpipe-org/mcp-odoo:latest`).
+  (`ghcr.io/castaso/castadoo-mcp:latest`).
 - Credentials for an Odoo 16+ instance: URL, database name, username, and a
   password or API key. Ask the user for these if you do not have them.
 
@@ -54,7 +54,7 @@ claude mcp add odoo \
   --env ODOO_DB=mycompany \
   --env ODOO_USERNAME=agent@mycompany.com \
   --env ODOO_PASSWORD=the-users-api-key \
-  -- uvx odoo-mcp
+  -- uvx castadoo-mcp
 ```
 
 Or write `.mcp.json` in the project root:
@@ -64,7 +64,7 @@ Or write `.mcp.json` in the project root:
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://mycompany.odoo.com",
         "ODOO_DB": "mycompany",
@@ -85,7 +85,7 @@ Add to Cline's MCP settings (`cline_mcp_settings.json`):
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://mycompany.odoo.com",
         "ODOO_DB": "mycompany",
@@ -110,7 +110,7 @@ Add to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.odoo]
 command = "uvx"
-args = ["odoo-mcp"]
+args = ["castadoo-mcp"]
 
 [mcp_servers.odoo.env]
 ODOO_URL = "https://mycompany.odoo.com"
@@ -129,15 +129,15 @@ fails.
 
 ### Any other stdio MCP client
 
-Use `command: "uvx"`, `args: ["odoo-mcp"]`, and the four `ODOO_*` env vars.
-If `uvx` is unavailable: `pip install odoo-mcp`, then `command: "odoo-mcp"`
+Use `command: "uvx"`, `args: ["castadoo-mcp"]`, and the four `ODOO_*` env vars.
+If `uvx` is unavailable: `pip install castadoo-mcp`, then `command: "castadoo-mcp"`
 or `python -m odoo_mcp`.
 
 ## Verification
 
 Run these in order; stop and troubleshoot on the first failure:
 
-1. `uvx odoo-mcp --health` — must exit 0 and print a JSON posture line.
+1. `uvx castadoo-mcp --health` — must exit 0 and print a JSON posture line.
 2. Call the `health_check` MCP tool through the client — confirm the Odoo
    connection is reachable and note the reported tool count.
 3. Call the `get_odoo_profile` MCP tool — confirm it returns the server

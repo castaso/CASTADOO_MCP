@@ -32,7 +32,7 @@ def test_cli_applies_streamable_http_runtime_settings(monkeypatch):
         cli.sys,
         "argv",
         [
-            "odoo-mcp",
+            "castadoo-mcp",
             "--transport",
             "streamable-http",
             "--host",
@@ -88,7 +88,7 @@ def test_cli_health_prints_non_secret_runtime_json(monkeypatch, capsys):
         cli.sys,
         "argv",
         [
-            "odoo-mcp",
+            "castadoo-mcp",
             "--transport",
             "streamable-http",
             "--host",
@@ -149,7 +149,7 @@ def test_setup_logging_json_mode_emits_structured_lines(monkeypatch, capsys):
 
 def test_setup_logging_writes_to_rotating_file(monkeypatch, tmp_path):
     cli = importlib.import_module("odoo_mcp.__main__")
-    log_path = tmp_path / "odoo-mcp.log"
+    log_path = tmp_path / "castadoo-mcp.log"
 
     try:
         cli.setup_logging(level="INFO", log_file=str(log_path))
@@ -251,7 +251,7 @@ def test_main_handles_keyboard_interrupt_gracefully(monkeypatch, capsys):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(cli.mcp, "run", raise_keyboard_interrupt)
-    monkeypatch.setattr(cli.sys, "argv", ["odoo-mcp"])
+    monkeypatch.setattr(cli.sys, "argv", ["castadoo-mcp"])
 
     assert cli.main() == 0
     captured = capsys.readouterr()
@@ -265,7 +265,7 @@ def test_main_handles_unexpected_exception_returns_one(monkeypatch, capsys):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(cli.mcp, "run", raise_runtime_error)
-    monkeypatch.setattr(cli.sys, "argv", ["odoo-mcp"])
+    monkeypatch.setattr(cli.sys, "argv", ["castadoo-mcp"])
 
     assert cli.main() == 1
     captured = capsys.readouterr()
@@ -279,7 +279,7 @@ def test_main_masks_secret_environment_values_in_startup_log(monkeypatch, capsys
     monkeypatch.setenv("ODOO_PASSWORD", "supersecret-do-not-print")
     monkeypatch.setenv("ODOO_URL", "https://odoo.example.test")
     monkeypatch.setattr(cli.mcp, "run", lambda *, transport, **kwargs: None)
-    monkeypatch.setattr(cli.sys, "argv", ["odoo-mcp"])
+    monkeypatch.setattr(cli.sys, "argv", ["castadoo-mcp"])
 
     assert cli.main() == 0
     err = capsys.readouterr().err
@@ -296,7 +296,7 @@ def test_main_logs_streamable_http_bind_and_path(monkeypatch, capsys):
         cli.sys,
         "argv",
         [
-            "odoo-mcp",
+            "castadoo-mcp",
             "--transport",
             "streamable-http",
             "--host",
@@ -352,7 +352,7 @@ def test_main_entrypoint_invokes_sys_exit_with_main_return_value(monkeypatch, ca
         return 0
 
     monkeypatch.setattr(cli, "main", fake_main)
-    monkeypatch.setattr(_sys, "argv", ["odoo-mcp", "--health"])
+    monkeypatch.setattr(_sys, "argv", ["castadoo-mcp", "--health"])
 
     real_exit = _sys.exit
 

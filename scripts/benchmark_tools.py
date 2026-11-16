@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Benchmark odoo-mcp tool latency via MCP stdio protocol.
+Benchmark castadoo-mcp tool latency via MCP stdio protocol.
 
 Measures p50 / p95 / mean for the primary read-only tools against a live
 Odoo instance.  Connection credentials are read from the same environment
@@ -243,7 +243,7 @@ async def _main(iterations: int, json_out: str | None) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Benchmark odoo-mcp tool latency against a live Odoo instance."
+        description="Benchmark castadoo-mcp tool latency against a live Odoo instance."
     )
     parser.add_argument(
         "--iterations",

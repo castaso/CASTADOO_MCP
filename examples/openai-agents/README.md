@@ -1,4 +1,4 @@
-# OpenAI Agents SDK + odoo-mcp
+# OpenAI Agents SDK + castadoo-mcp
 
 Two variants:
 
@@ -14,7 +14,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY=sk-...
 
 # terminal 1 — the MCP server (set ODOO_* env vars first)
-odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 
 # terminal 2
 python odoo_agent.py
@@ -30,9 +30,9 @@ for `sale.order`.
 - Running **multiple** MCP servers on one agent? Set
   `include_server_in_tool_names=True` to avoid tool-name collisions.
 - stdio variant: replace `MCPServerStreamableHttp` with `MCPServerStdio`
-  and `params={"command": "uvx", "args": ["odoo-mcp"], "env": {...}}`.
-- Multi-instance odoo-mcp: the agent passes `instance="name"` in tool
+  and `params={"command": "uvx", "args": ["castadoo-mcp"], "env": {...}}`.
+- Multi-instance castadoo-mcp: the agent passes `instance="name"` in tool
   arguments — just say which instance you mean in the prompt.
 
 ---
-Last verified: 2026-06-10 — ran end-to-end against `openai-agents==0.17.4`, odoo-mcp Streamable HTTP, a live Odoo 19 (Docker), and DeepSeek (`OPENAI_BASE_URL` + `OPENAI_MODEL=deepseek-chat`). HostedMCPTool variant is config-checked only (needs a public server URL).
+Last verified: 2026-06-10 — ran end-to-end against `openai-agents==0.17.4`, castadoo-mcp Streamable HTTP, a live Odoo 19 (Docker), and DeepSeek (`OPENAI_BASE_URL` + `OPENAI_MODEL=deepseek-chat`). HostedMCPTool variant is config-checked only (needs a public server URL).

@@ -1,5 +1,5 @@
 """
-Core infrastructure for the Odoo MCP server.
+Core infrastructure for the CASTADOO MCP server.
 
 Contains: mcp instance, AppContext, app_lifespan, shared infra helpers,
 resources (odoo:// URIs), and write-approval store.
@@ -130,7 +130,7 @@ def load_server_instructions() -> str:
 
 
 mcp = MCPServer(
-    "Odoo MCP Server",
+    "CASTADOO MCP Server",
     instructions=load_server_instructions(),
     dependencies=["requests"],
     lifespan=app_lifespan,

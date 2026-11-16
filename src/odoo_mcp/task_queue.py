@@ -97,7 +97,7 @@ class AsyncTaskManager:
     def _ensure_executor(self) -> ThreadPoolExecutor:
         if self._executor is None:
             self._executor = ThreadPoolExecutor(
-                max_workers=self.max_workers, thread_name_prefix="odoo-mcp-task"
+                max_workers=self.max_workers, thread_name_prefix="castadoo-mcp-task"
             )
         return self._executor
 

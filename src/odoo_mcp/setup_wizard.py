@@ -1,4 +1,4 @@
-"""Interactive setup wizard for ``odoo-mcp --setup``.
+"""Interactive setup wizard for ``castadoo-mcp --setup``.
 
 Collects connection details, tests them against the live Odoo, writes a
 config file the server discovers automatically, and prints ready-to-paste
@@ -38,7 +38,7 @@ def prompt_value(
 
 def collect_connection_details(input_func: Any = None) -> dict[str, Any]:
     """Ask for the four connection values plus transport."""
-    print("Odoo MCP setup — answer a few questions to generate a config.\n")
+    print("CASTADOO MCP setup — answer a few questions to generate a config.\n")
     url = prompt_value("Odoo URL (e.g. https://mycompany.odoo.com)", input_func=input_func)
     db = prompt_value("Database name", input_func=input_func)
     username = prompt_value("Username (login email)", input_func=input_func)
@@ -111,7 +111,7 @@ def write_config(details: dict[str, Any], path: Path) -> Path:
 def client_snippets(config_path: Path) -> str:
     """Ready-to-paste client configuration snippets."""
     env_json = json.dumps(
-        {"command": "uvx", "args": ["odoo-mcp"],
+        {"command": "uvx", "args": ["castadoo-mcp"],
          "env": {"ODOO_CONFIG_FILE": str(config_path)}},
         indent=2,
     )
@@ -120,7 +120,7 @@ def client_snippets(config_path: Path) -> str:
 Add the server to your client:
 
 Claude Code:
-  claude mcp add odoo --env ODOO_CONFIG_FILE={config_path} -- uvx odoo-mcp
+  claude mcp add odoo --env ODOO_CONFIG_FILE={config_path} -- uvx castadoo-mcp
 
 Cursor / Claude Desktop (mcp.json / claude_desktop_config.json):
   {{

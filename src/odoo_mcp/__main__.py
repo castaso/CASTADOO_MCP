@@ -1,5 +1,5 @@
 """
-Command line entry point for the Odoo MCP Server
+Command line entry point for the CASTADOO MCP Server
 """
 
 import argparse
@@ -157,7 +157,7 @@ def is_secret_env_key(key: str) -> bool:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse command line arguments and environment defaults."""
-    parser = argparse.ArgumentParser(description="Run the Odoo MCP server.")
+    parser = argparse.ArgumentParser(description="Run the CASTADOO MCP server.")
     parser.add_argument(
         "--transport",
         choices=sorted(SUPPORTED_MCP_TRANSPORTS),
@@ -332,7 +332,7 @@ def main() -> int:
             print(json.dumps(health_payload(args), sort_keys=True))
             return 0
 
-        print("=== ODOO MCP SERVER STARTING ===", file=sys.stderr)
+        print("=== CASTADOO MCP SERVER STARTING ===", file=sys.stderr)
         print(f"Python version: {sys.version}", file=sys.stderr)
         print("Environment variables:", file=sys.stderr)
         for key, value in os.environ.items():

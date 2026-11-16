@@ -50,7 +50,7 @@ startCommand:
         description: Bypass approval-token gate for chatter_post
   commandFunction: |-
     (config) => ({
-      command: "odoo-mcp",
+      command: "castadoo-mcp",
       args: [],
       env: {
         ODOO_URL: config.odooUrl,

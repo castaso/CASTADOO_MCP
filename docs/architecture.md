@@ -1,6 +1,6 @@
 # Architecture
 
-Odoo MCP is a thin MCP server around a deliberately small Odoo client. The design goal is simple: give agents high-signal Odoo context while keeping execution paths inspectable and bounded.
+CASTADOO MCP is a thin MCP server around a deliberately small Odoo client. The design goal is simple: give agents high-signal Odoo context while keeping execution paths inspectable and bounded.
 
 ## System shape
 

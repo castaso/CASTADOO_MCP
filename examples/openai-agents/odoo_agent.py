@@ -1,10 +1,10 @@
-"""OpenAI Agents SDK + odoo-mcp over Streamable HTTP.
+"""OpenAI Agents SDK + castadoo-mcp over Streamable HTTP.
 
 Prerequisites:
   1. pip install -r requirements.txt
   2. export OPENAI_API_KEY=...
   3. Start the MCP server in another terminal:
-       odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+       castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 
 Run:
   python odoo_agent.py

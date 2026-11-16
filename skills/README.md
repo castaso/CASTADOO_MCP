@@ -1,9 +1,9 @@
-# Agent Skills for odoo-mcp
+# Agent Skills for castadoo-mcp
 
-[![skills.sh](https://skills.sh/b/erpipe-org/mcp-odoo)](https://skills.sh/erpipe-org/mcp-odoo)
+[![skills.sh](https://skills.sh/b/castaso/CASTADOO_MCP)](https://skills.sh/castaso/CASTADOO_MCP)
 
-Business-workflow playbooks that pair with the odoo-mcp server — the
-[MCP + Skills hybrid](https://github.com/erpipe-org/mcp-odoo#readme): MCP
+Business-workflow playbooks that pair with the castadoo-mcp server — the
+[MCP + Skills hybrid](https://github.com/castaso/CASTADOO_MCP#readme): MCP
 provides the safe tool layer (gated writes, field ACL, bounded reads),
 these skills provide the judgment layer (pacing, evidence rules, human
 checkpoints). They follow the open
@@ -11,7 +11,7 @@ checkpoints). They follow the open
 frontmatter) supported by Claude Code, Codex, Cursor, Gemini CLI, and
 other skills-compatible agents.
 
-| Skill | What it drives | Key odoo-mcp tools |
+| Skill | What it drives | Key castadoo-mcp tools |
 | --- | --- | --- |
 | [odoo-data-quality-gate](odoo-data-quality-gate/SKILL.md) | Evidence-first data audit + gated remediation | `data_quality_report`, `diagnose_access`, write gate |
 | [odoo-migration-copilot](odoo-migration-copilot/SKILL.md) | Version-upgrade worklist (16→19/20), log triage, JSON-2 prep | `scan_addons_source`, `analyze_upgrade_log`, `upgrade_risk_report`, `lookup_model_history`, `generate_json2_payload` |
@@ -24,18 +24,18 @@ One command, any skills-compatible agent (Claude Code, Codex, Gemini CLI,
 GitHub Copilot, OpenCode, Warp, …):
 
 ```bash
-npx skills add erpipe-org/mcp-odoo
+npx skills add castaso/CASTADOO_MCP
 ```
 
 Or manually for Claude Code:
 
 ```bash
-git clone https://github.com/erpipe-org/mcp-odoo
+git clone https://github.com/castaso/CASTADOO_MCP
 cp -r mcp-odoo/skills/odoo-* ~/.claude/skills/
 ```
 
-Then make sure the odoo-mcp server itself is connected
-(`uvx odoo-mcp --setup` prints the snippet). Invoke naturally ("check data
+Then make sure the castadoo-mcp server itself is connected
+(`uvx castadoo-mcp --setup` prints the snippet). Invoke naturally ("check data
 quality before our migration") or explicitly (`/odoo-data-quality-gate`).
 
 ## Design rules these skills follow
@@ -61,7 +61,7 @@ npx skills add tuanle96/odoo-ai-skills
 ```
 
 The two packs are designed together: [odoo-ai-skills](https://github.com/tuanle96/odoo-ai-skills)
-uses odoo-mcp as its RPC fallback when there's no shell (Odoo Online/SaaS),
+uses castadoo-mcp as its RPC fallback when there's no shell (Odoo Online/SaaS),
 and both route every write through a human gate.
 
 Want a skill for your vertical? They're plain Markdown — PRs welcome

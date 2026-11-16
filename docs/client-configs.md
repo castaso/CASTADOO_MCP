@@ -1,6 +1,6 @@
 # Client Configurations
 
-Odoo MCP is most predictable over `stdio`. Use Streamable HTTP only when your client explicitly supports remote MCP servers.
+CASTADOO MCP is most predictable over `stdio`. Use Streamable HTTP only when your client explicitly supports remote MCP servers.
 
 ## Local stdio
 
@@ -11,7 +11,7 @@ Odoo MCP is most predictable over `stdio`. Use Streamable HTTP only when your cl
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -150,7 +150,7 @@ Cursor reads MCP configuration from `~/.cursor/mcp.json` (global) or `.cursor/mc
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -172,7 +172,7 @@ Windsurf reads MCP configuration from `~/.codeium/windsurf/mcp_config.json`.
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -195,7 +195,7 @@ For workspaces that prefer a `.vscode/mcp.json` file:
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -217,7 +217,7 @@ Zed (via the assistant context_servers feature) reads MCP servers from `settings
     "odoo": {
       "command": {
         "path": "uvx",
-        "args": ["odoo-mcp"],
+        "args": ["castadoo-mcp"],
         "env": {
           "ODOO_URL": "https://your-odoo-instance.com",
           "ODOO_DB": "your-database",
@@ -240,7 +240,7 @@ Continue (`~/.continue/config.json`) supports MCP servers under the `mcpServers`
     {
       "name": "odoo",
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -261,7 +261,7 @@ Cline reads MCP servers from its settings UI; the JSON shape mirrors Claude Desk
   "mcpServers": {
     "odoo": {
       "command": "uvx",
-      "args": ["odoo-mcp"],
+      "args": ["castadoo-mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database",
@@ -278,7 +278,7 @@ Cline reads MCP servers from its settings UI; the JSON shape mirrors Claude Desk
 Start the server locally:
 
 ```bash
-odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 ```
 
 Generic remote MCP client:
@@ -313,7 +313,7 @@ For public or shared-network use, put the server behind a reverse proxy or platf
 
 ## Docker stdio
 
-The prebuilt image lives at `ghcr.io/erpipe-org/mcp-odoo:latest`. Replace `mcp/odoo:latest` below with that tag to skip the local build step.
+The prebuilt image lives at `ghcr.io/castaso/castadoo-mcp:latest`. Replace `mcp/odoo:latest` below with that tag to skip the local build step.
 
 ```json
 {
@@ -375,5 +375,5 @@ npx --yes @modelcontextprotocol/inspector@2 --cli python -m odoo_mcp -- \
 Check HTTP health posture:
 
 ```bash
-odoo-mcp --transport streamable-http --health
+castadoo-mcp --transport streamable-http --health
 ```

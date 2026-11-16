@@ -1,5 +1,11 @@
 # Changelog
 
+> **Fork notice.** This changelog is upstream's, preserved verbatim so
+> release history stays traceable. CASTADOO MCP is a branding fork of
+> [https://github.com/erpipe-org/mcp-odoo](https://github.com/erpipe-org/mcp-odoo) - see [NOTICE.md](./NOTICE.md).
+> Entries below describe upstream `odoo-mcp`, which is functionally the
+> same server this fork ships as `castadoo-mcp`.
+
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]

@@ -1,4 +1,4 @@
-"""Tests for the interactive `odoo-mcp --setup` wizard (network-free)."""
+"""Tests for the interactive `castadoo-mcp --setup` wizard (network-free)."""
 
 from __future__ import annotations
 
@@ -164,6 +164,6 @@ def test_cli_setup_flag_invokes_wizard(monkeypatch):
         return 0
 
     monkeypatch.setattr("odoo_mcp.setup_wizard.run_setup", fake_run_setup)
-    monkeypatch.setattr(sys, "argv", ["odoo-mcp", "--setup"])
+    monkeypatch.setattr(sys, "argv", ["castadoo-mcp", "--setup"])
     assert cli.main() == 0
     assert called == {"yes": True}

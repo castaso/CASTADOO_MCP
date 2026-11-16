@@ -17,7 +17,7 @@ shape/transport problems.
 The credential itself was rejected before any model-level check.
 - Verify `ODOO_URL` / `ODOO_DB` / `ODOO_USERNAME` / `ODOO_PASSWORD`.
 - Odoo Online (SaaS) requires an API key, not the login password.
-- Run `odoo-mcp --health`, then the `health_check` tool.
+- Run `castadoo-mcp --health`, then the `health_check` tool.
 
 ### `db_routing`
 The database name does not exist or the request reached the wrong database.

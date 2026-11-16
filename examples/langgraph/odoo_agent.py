@@ -1,10 +1,10 @@
-"""LangGraph + odoo-mcp via langchain-mcp-adapters.
+"""LangGraph + castadoo-mcp via langchain-mcp-adapters.
 
 Prerequisites:
   1. pip install -r requirements.txt   (langchain-mcp-adapters >= 0.2.2)
   2. export OPENAI_API_KEY=...
   3. Start the MCP server in another terminal:
-       odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+       castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 
 Run:
   python odoo_agent.py

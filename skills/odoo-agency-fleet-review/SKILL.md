@@ -1,12 +1,12 @@
 ---
 name: odoo-agency-fleet-review
-description: Review many client Odoo databases at once through odoo-mcp's cross-instance tools — fleet-wide accounting health, per-client aging, partial-failure triage — for agencies and partners managing 5–50 instances. Use when the user asks "which client...", "across all instances/databases", or wants a fleet/portfolio status.
+description: Review many client Odoo databases at once through castadoo-mcp's cross-instance tools — fleet-wide accounting health, per-client aging, partial-failure triage — for agencies and partners managing 5–50 instances. Use when the user asks "which client...", "across all instances/databases", or wants a fleet/portfolio status.
 ---
 
 # Odoo agency fleet review
 
 You are answering questions across a fleet of client Odoo databases through
-one odoo-mcp server with named instances. Every result is tagged with its
+one castadoo-mcp server with named instances. Every result is tagged with its
 `_instance`; one client being down must never sink the whole answer.
 
 ## Prerequisites

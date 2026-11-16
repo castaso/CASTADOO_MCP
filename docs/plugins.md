@@ -1,6 +1,6 @@
 # Tool plugins
 
-Since v1.1 third parties can ship their own MCP tools for odoo-mcp as normal
+Since v1.1 third parties can ship their own MCP tools for castadoo-mcp as normal
 Python packages — no fork required. An agency can add its vertical's tools
 (`construction_wip_report`, `pharma_batch_trace`, …) and keep pulling
 upstream releases.
@@ -12,7 +12,7 @@ upstream releases.
   code runs, ever.
 - **A plugin is arbitrary Python running in the server process** with the
   server's Odoo credentials. There is no sandbox. Install only plugins you
-  trust exactly as much as odoo-mcp itself.
+  trust exactly as much as castadoo-mcp itself.
 - **Fail-isolated:** a plugin that raises at load time is recorded in
   `health_check.plugins.failed` and skipped; builtin tools keep serving.
 - **Contract:** plugins must follow the same rules as builtin tools —
@@ -52,11 +52,11 @@ upstream releases.
                return api.error_envelope("my_tool", e)
    ```
 
-3. Install it next to odoo-mcp and opt in:
+3. Install it next to castadoo-mcp and opt in:
 
    ```bash
    pip install my-plugin
-   ODOO_MCP_PLUGINS=my_plugin uvx odoo-mcp
+   ODOO_MCP_PLUGINS=my_plugin uvx castadoo-mcp
    ```
 
 A complete runnable example lives in

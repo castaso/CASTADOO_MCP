@@ -1,4 +1,4 @@
-"""Pure diagnostic helpers for Odoo MCP tools.
+"""Pure diagnostic helpers for CASTADOO MCP tools.
 
 This module intentionally has no network, config, or Odoo client side effects.
 It builds preview/report payloads that server adapters can expose safely.

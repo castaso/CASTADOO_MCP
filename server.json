@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.erpipe-org/mcp-odoo",
-  "description": "Odoo MCP: gated writes, multi-instance. Free hosted: ERPipe (erpipe.com)",
+  "name": "io.github.castaso/castadoo-mcp",
+  "description": "CASTADOO MCP: gated writes, multi-instance, 41 tools. Fork of odoo-mcp (MIT).",
   "version": "1.3.2",
-  "websiteUrl": "https://erpipe-org.github.io/mcp-odoo/",
+  "websiteUrl": "https://https://github.com/castaso/CASTADOO_MCP#readme",
   "repository": {
-    "url": "https://github.com/erpipe-org/mcp-odoo",
+    "url": "https://github.com/castaso/CASTADOO_MCP",
     "source": "github"
   },
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "odoo-mcp",
+      "identifier": "castadoo-mcp",
       "version": "1.3.2",
       "transport": {
         "type": "stdio"

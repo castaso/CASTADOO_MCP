@@ -1,10 +1,10 @@
-"""CrewAI + odoo-mcp using the native mcps=[...] agent wiring.
+"""CrewAI + castadoo-mcp using the native mcps=[...] agent wiring.
 
 Prerequisites:
   1. pip install -r requirements.txt
   2. export OPENAI_API_KEY=...   (or configure another CrewAI LLM)
   3. Start the MCP server in another terminal:
-       odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+       castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
 
 Run:
   python odoo_crew.py

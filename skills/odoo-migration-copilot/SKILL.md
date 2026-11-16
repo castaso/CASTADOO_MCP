@@ -1,11 +1,11 @@
 ---
 name: odoo-migration-copilot
-description: Plan and de-risk an Odoo version upgrade (16→17→18→19/20) using odoo-mcp's migration workbench — audit custom addons, classify upgrade-log failures into a worklist, resolve model renames, and preview JSON-2 payloads for the XML-RPC sunset. Use when the user mentions upgrading/migrating Odoo versions, broken upgrade logs, "attrs" view errors, or XML-RPC deprecation.
+description: Plan and de-risk an Odoo version upgrade (16→17→18→19/20) using castadoo-mcp's migration workbench — audit custom addons, classify upgrade-log failures into a worklist, resolve model renames, and preview JSON-2 payloads for the XML-RPC sunset. Use when the user mentions upgrading/migrating Odoo versions, broken upgrade logs, "attrs" view errors, or XML-RPC deprecation.
 ---
 
 # Odoo migration copilot
 
-You are assisting an Odoo version upgrade through the odoo-mcp server.
+You are assisting an Odoo version upgrade through the castadoo-mcp server.
 Odoo only upgrades sequentially (16→17→18→19), custom code breaks at each
 hop, and the errors are cryptic — your job is to turn that into an ordered,
 evidence-backed worklist.
@@ -45,7 +45,7 @@ evidence-backed worklist.
 8. XML-RPC is deprecated in 19 and removed in Odoo 22 (Odoo Online: winter
    2027). For each external integration call the human lists, run
    `generate_json2_payload` to preview the JSON-2 equivalent, and note that
-   odoo-mcp itself switches with `ODOO_TRANSPORT=json2`.
+   castadoo-mcp itself switches with `ODOO_TRANSPORT=json2`.
 
 ## Output format
 

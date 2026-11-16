@@ -7,7 +7,7 @@ labels: ["enhancement"]
 
 ## Problem
 
-<!-- What are you trying to do that Odoo MCP does not currently support? -->
+<!-- What are you trying to do that CASTADOO MCP does not currently support? -->
 
 ## Proposed change
 

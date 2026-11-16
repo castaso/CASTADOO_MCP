@@ -1,4 +1,4 @@
-"""Pure helper builders for agent-facing Odoo MCP tools.
+"""Pure helper builders for agent-facing CASTADOO MCP tools.
 
 This module avoids network, config, and Odoo client side effects. Server
 adapters pass live metadata in when they have it.

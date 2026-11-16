@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Standalone script to run the Odoo MCP server
+Standalone script to run the CASTADOO MCP server
 Uses the same approach as in the official MCP SDK examples
 """
 
@@ -55,7 +55,7 @@ def main() -> int:
     logger = setup_logging()
 
     try:
-        logger.info("=== ODOO MCP SERVER STARTING ===")
+        logger.info("=== CASTADOO MCP SERVER STARTING ===")
         logger.info(f"Python version: {sys.version}")
         logger.info("Environment variables:")
         for key, value in os.environ.items():
@@ -67,7 +67,7 @@ def main() -> int:
 
         logger.info(f"MCP object type: {type(mcp)}")
 
-        logger.info("Starting Odoo MCP server with stdio transport...")
+        logger.info("Starting CASTADOO MCP server with stdio transport...")
         mcp.run(transport="stdio")
         logger.info("MCP server stopped normally")
         return 0

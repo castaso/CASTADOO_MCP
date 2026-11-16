@@ -1,7 +1,7 @@
 # Data quality & the migration workbench
 
 Dirty data is the most common reason ERP AI pilots fail and migrations slip.
-odoo-mcp ships a read-only data-quality pack plus an upgrade-log analyzer so
+castadoo-mcp ships a read-only data-quality pack plus an upgrade-log analyzer so
 an agent can *find* the problems with evidence — and route every fix through
 the gated write workflow.
 

@@ -1,19 +1,19 @@
 ---
 name: odoo-data-quality-gate
-description: Audit an Odoo database's data quality with evidence before trusting AI answers, importing, or migrating — duplicates, missing required values, orphaned references, format anomalies — and drive remediation through odoo-mcp's gated write workflow. Use when the user asks to "check data quality", "clean up data", "prepare for migration", "find duplicates", or when aggregate answers look suspicious.
+description: Audit an Odoo database's data quality with evidence before trusting AI answers, importing, or migrating — duplicates, missing required values, orphaned references, format anomalies — and drive remediation through castadoo-mcp's gated write workflow. Use when the user asks to "check data quality", "clean up data", "prepare for migration", "find duplicates", or when aggregate answers look suspicious.
 ---
 
 # Odoo data-quality gate
 
 You are running a data-quality audit against a live Odoo database through the
-odoo-mcp server (tools named `data_quality_report`, `diagnose_access`,
+castadoo-mcp server (tools named `data_quality_report`, `diagnose_access`,
 `preview_write`, …). Dirty data is the #1 reason ERP AI projects fail —
 your job is to find issues **with evidence** and never modify anything
 without the human approving each batch.
 
 ## Prerequisites
 
-- odoo-mcp connected (any Odoo 16+; check with `health_check`).
+- castadoo-mcp connected (any Odoo 16+; check with `health_check`).
 - Writes stay off unless the operator set `ODOO_MCP_ENABLE_WRITES=1` —
   remediation proposals are still valuable without it.
 

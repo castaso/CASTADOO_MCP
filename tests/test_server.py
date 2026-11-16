@@ -58,7 +58,7 @@ def test_server_import_initializes_mcpserver_with_current_sdk_without_lifespan()
     server = importlib.import_module("odoo_mcp.server")
 
     assert isinstance(server.mcp, MCPServer)
-    assert server.mcp.name == "Odoo MCP Server"
+    assert server.mcp.name == "CASTADOO MCP Server"
     assert server.mcp.instructions == "MCP Server for interacting with Odoo ERP systems"
 
 

@@ -6,7 +6,7 @@ unsupported Odoo version? where did margins slip this quarter?* Commercial
 platforms answer this by syncing every client DB into a warehouse — expensive
 and another copy of sensitive data to secure.
 
-`odoo-mcp` answers it by **fanning out over the instances you already
+`castadoo-mcp` answers it by **fanning out over the instances you already
 configured** and merging the results. No warehouse, no sync, no extra data
 copy. Read-only, each instance under its own field ACL, with a partial-result
 contract so one client's downtime never sinks the whole query.

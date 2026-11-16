@@ -1,5 +1,5 @@
 """
-MCP prompts for the Odoo MCP server.
+MCP prompts for the CASTADOO MCP server.
 """
 
 from .server_core import mcp

@@ -8,7 +8,7 @@ agent reads on that user's behalf, those fields land in the model's context.
 Field ACL is an **opt-in, server-side** layer that removes designated fields
 from everything the MCP server returns, so sensitive columns never reach the
 agent even though the underlying Odoo credential can read them. It is the
-first open-source Odoo MCP server to offer this; until now only commercial
+first open-source CASTADOO MCP server to offer this; until now only commercial
 bridges did.
 
 > Defense in depth, not a replacement for Odoo ACLs. This is enforced in the
@@ -104,7 +104,7 @@ With `res.partner.credit_limit` denied for `default`:
 
 ```bash
 # credit_limit is absent and reported as redacted
-uvx odoo-mcp --health   # runtime.field_acl.active == true
+uvx castadoo-mcp --health   # runtime.field_acl.active == true
 ```
 
 Then via your agent: `read_record` on a partner returns no `credit_limit`

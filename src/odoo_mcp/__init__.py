@@ -1,5 +1,5 @@
 """
-Odoo MCP Server - MCP Server for Odoo Integration
+CASTADOO MCP Server - MCP Server for Odoo Integration
 """
 
 from .server import mcp

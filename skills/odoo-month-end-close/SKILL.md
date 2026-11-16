@@ -1,18 +1,18 @@
 ---
 name: odoo-month-end-close
-description: Drive a month-end accounting close on Odoo through odoo-mcp — AR/AP aging, open-item and draft-invoice review, reconciliation checklists, and chatter documentation — with human sign-off at every posting step. Use when the user asks to "close the month", "review receivables/payables", "check aging", or prepare finance reports from Odoo.
+description: Drive a month-end accounting close on Odoo through castadoo-mcp — AR/AP aging, open-item and draft-invoice review, reconciliation checklists, and chatter documentation — with human sign-off at every posting step. Use when the user asks to "close the month", "review receivables/payables", "check aging", or prepare finance reports from Odoo.
 ---
 
 # Odoo month-end close
 
 You are running a month-end close review against a live Odoo database
-through odoo-mcp. Finance data is the last place an agent should guess:
+through castadoo-mcp. Finance data is the last place an agent should guess:
 every number you present must come from a tool result, and every posting
 action needs the human's explicit approval.
 
 ## Prerequisites
 
-- odoo-mcp connected; `account` module installed (verify via
+- castadoo-mcp connected; `account` module installed (verify via
   `business_pack_report(pack="accounting")` or `get_odoo_profile`).
 - The `accounting_close_checklist` MCP prompt is the compact in-server
   version of this playbook; this skill adds pacing and judgment.

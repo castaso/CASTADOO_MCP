@@ -1,4 +1,4 @@
-# odoo-mcp Benchmark Methodology & Results
+# castadoo-mcp Benchmark Methodology & Results
 
 ## TL;DR
 
@@ -54,7 +54,7 @@ This captures:
 
 - MCP stdio serialisation / deserialisation
 - XML-RPC (or JSON-2) round-trip to Odoo
-- odoo-mcp server-side logic (field selection, caching, etc.)
+- castadoo-mcp server-side logic (field selection, caching, etc.)
 
 It does **not** capture Claude / LLM token generation time.
 
@@ -89,7 +89,7 @@ Default: 20 iterations per tool.
 2. **Database size** — more records = slower searches, but `list_models` and
    `get_model_fields` are nearly unaffected
 3. **Schema cache** — `get_model_fields` p50 drops ~30% on the second call to
-   the same model because odoo-mcp caches the result in-process
+   the same model because castadoo-mcp caches the result in-process
 4. **Transport** — XML-RPC and JSON-2 have similar latency for simple calls;
    JSON-2 may be faster on Odoo 19+ for bulk reads
 5. **Network** — all figures below are loopback (localhost); add your actual
@@ -125,7 +125,7 @@ diagnose_access                      68.0     97.0     68.5     20
 | Transport | XML-RPC |
 | Network | loopback (Docker on localhost) |
 | Host | Apple Silicon MacBook, macOS 25.4 |
-| odoo-mcp | installed from source (this repo) |
+| castadoo-mcp | installed from source (this repo) |
 | Iterations | 20 + 1 warmup |
 
 ### Observations
@@ -278,7 +278,7 @@ same hardware, same transport**.
 ## Reproduce from Scratch
 
 ```bash
-git clone https://github.com/vibeops/odoo-mcp && cd odoo-mcp
+git clone https://github.com/vibeops/castadoo-mcp && cd castadoo-mcp
 
 # Start DB + Odoo 19
 ODOO_VERSION=19.0 ODOO_PORT=18169 COMPOSE_PROJECT_NAME=mcp-bench \

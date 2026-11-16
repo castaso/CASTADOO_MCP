@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with Odoo MCP
+about: Report a problem with CASTADOO MCP
 title: "[bug] "
 labels: ["bug"]
 ---
@@ -11,7 +11,7 @@ labels: ["bug"]
 - Odoo transport: <!-- xmlrpc | json2 -->
 - MCP transport: <!-- stdio | streamable-http | sse -->
 - Python version: <!-- e.g. 3.12.3 -->
-- `odoo-mcp` version or commit: <!-- output of `pip show odoo-mcp` or git SHA -->
+- `castadoo-mcp` version or commit: <!-- output of `pip show castadoo-mcp` or git SHA -->
 - Client name and version: <!-- e.g. Claude Desktop 0.7.x, MCP Inspector, custom -->
 
 ## Command or MCP client configuration

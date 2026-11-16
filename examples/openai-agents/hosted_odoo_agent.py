@@ -1,8 +1,8 @@
-"""OpenAI Agents SDK + odoo-mcp via HostedMCPTool.
+"""OpenAI Agents SDK + castadoo-mcp via HostedMCPTool.
 
 The MODEL side (OpenAI Responses API) connects to your MCP server, so the
 server URL must be reachable from the internet — use this for deployed
-odoo-mcp instances, not localhost.
+castadoo-mcp instances, not localhost.
 
 Constraint: HostedMCPTool only works with OpenAI models on the Responses
 API. For local development prefer odoo_agent.py.
@@ -28,7 +28,7 @@ async def main() -> None:
                 tool_config={
                     "type": "mcp",
                     "server_label": "odoo",
-                    "server_url": "https://odoo-mcp.example.com/mcp",
+                    "server_url": "https://castadoo-mcp.example.com/mcp",
                     "require_approval": "never",
                 }
             )

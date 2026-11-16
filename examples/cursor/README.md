@@ -1,10 +1,10 @@
-# Cursor + odoo-mcp
+# Cursor + castadoo-mcp
 
 Two files, both copied into your project:
 
 | Example file | Copy to | Purpose |
 | --- | --- | --- |
-| [`mcp.json`](./mcp.json) | `.cursor/mcp.json` | Registers the odoo-mcp server (stdio and/or HTTP) |
+| [`mcp.json`](./mcp.json) | `.cursor/mcp.json` | Registers the castadoo-mcp server (stdio and/or HTTP) |
 | [`rules/odoo.mdc`](./rules/odoo.mdc) | `.cursor/rules/odoo.mdc` | Teaches the agent safe Odoo conventions |
 
 > `.cursorrules` (root-level file) is **deprecated** — use `.cursor/rules/*.mdc`
@@ -18,7 +18,7 @@ Two files, both copied into your project:
    HTTP transport yourself and keep only the `odoo-http` entry:
 
    ```bash
-   odoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
+   castadoo-mcp --transport streamable-http --host 127.0.0.1 --port 8000 --path /mcp
    ```
 
 3. Open Cursor Settings → MCP and confirm the `odoo` server shows its tools.

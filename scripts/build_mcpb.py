@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the Claude Desktop .mcpb bundle for odoo-mcp.
+"""Build the Claude Desktop .mcpb bundle for castadoo-mcp.
 
-Thin bundle: the manifest launches `uvx odoo-mcp==<version>` (uv must be
+Thin bundle: the manifest launches `uvx castadoo-mcp==<version>` (uv must be
 installed), so the archive carries only the manifest. If PATH resolution in
 GUI apps proves painful for users, the upgrade path is a fat bundle with
 `pip install --target` vendored dependencies and a python entry point.
@@ -34,7 +34,7 @@ def build(version: str, out_dir: Path) -> Path:
     json.loads(manifest)  # fail fast on malformed JSON
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    bundle_path = out_dir / f"odoo-mcp-{version}.mcpb"
+    bundle_path = out_dir / f"castadoo-mcp-{version}.mcpb"
     with zipfile.ZipFile(bundle_path, "w", zipfile.ZIP_DEFLATED) as bundle:
         bundle.writestr("manifest.json", manifest)
         icon = ROOT / "mcpb" / "icon.png"

@@ -1,4 +1,7 @@
 include CHANGELOG.md
+include SYNCING.md
+include TRADEMARKS.md
+include NOTICE.md
 include CODE_OF_CONDUCT.md
 include CONTRIBUTING.md
 include SECURITY.md

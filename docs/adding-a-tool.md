@@ -1,4 +1,4 @@
-# Adding a tool to odoo-mcp
+# Adding a tool to castadoo-mcp
 
 A walkthrough of the conventions a new MCP tool must follow. Ten minutes of
 reading here saves a round of review comments.
@@ -83,6 +83,6 @@ module, add it to the matching contract in `.importlinter`.
 
 ## Good first contributions
 
-Check the [good first issue label](https://github.com/erpipe-org/mcp-odoo/labels/good%20first%20issue)
+Check the [good first issue label](https://github.com/castaso/CASTADOO_MCP/labels/good%20first%20issue)
 — typed output schemas, rename-catalog entries, and client examples are all
 self-contained. Questions → GitHub Discussions.

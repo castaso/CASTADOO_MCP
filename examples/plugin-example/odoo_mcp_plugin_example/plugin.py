@@ -1,8 +1,8 @@
-"""Example odoo-mcp tool plugin.
+"""Example castadoo-mcp tool plugin.
 
-Install this package next to odoo-mcp, then opt in:
+Install this package next to castadoo-mcp, then opt in:
 
-    ODOO_MCP_PLUGINS=example uvx odoo-mcp
+    ODOO_MCP_PLUGINS=example uvx castadoo-mcp
 
 The ``register`` entry point receives the stable plugin API
 (``odoo_mcp.plugin_api``). Follow the same rules as builtin tools: bounded
