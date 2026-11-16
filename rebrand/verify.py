@@ -205,16 +205,25 @@ def verify_venv_python() -> Path:
 
 
 def install_into(py: Path, source: Path) -> bool:
-    res = _run([str(py), "-m", "pip", "install", "-q", "-e", f"{source}[dev]"],
-               cwd=source, timeout=900)
-    if res.returncode != 0:
-        # uv is the documented tool and is much faster; fall back to it.
-        uv = _run(["uv", "pip", "install", "--python", str(py), "-e", f"{source}[dev]"],
-                  cwd=source, timeout=900)
-        if uv.returncode != 0:
-            bad(f"dependency install failed: {(uv.stderr or res.stderr).strip()[:200]}")
-            return False
-    return True
+    """Install the project (editable, with dev extras) into the verify venv.
+
+    ``uv venv`` creates an environment without ``pip``, so pip is only a
+    fallback; uv is the documented and reliable path. On failure the tail of the
+    output is reported, because the head is just uv's preamble.
+    """
+    uv = _run(["uv", "pip", "install", "--python", str(py), "-e", f"{source}[dev]"],
+              cwd=source, timeout=1800)
+    if uv.returncode == 0:
+        return True
+
+    pip = _run([str(py), "-m", "pip", "install", "-q", "-e", f"{source}[dev]"],
+               cwd=source, timeout=1800)
+    if pip.returncode == 0:
+        return True
+
+    detail = (uv.stderr or uv.stdout or "").strip().splitlines()[-6:]
+    bad("dependency install failed: " + " | ".join(detail))
+    return False
 
 
 # ---------------------------------------------------------------------------
