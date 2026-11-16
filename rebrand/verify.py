@@ -130,15 +130,17 @@ def clone_at(rev: str) -> Path:
 
     ``--no-hardlinks`` is essential: this filesystem refuses the hardlinks that
     ``--local`` uses by default (``fatal: failed to create link ... Function not
-    implemented``), and ``safe.directory=*`` keeps git from rejecting the clone
-    over the ownership guard.
+    implemented``). The revision is resolved to a sha in the *source* repo first,
+    because a local clone's only remote is ``origin`` — it has no ``upstream/*``
+    remote-tracking refs to check out.
     """
+    sha = git("rev-parse", "--verify", rev).strip()
     path = _temp_root()
     res = _run(["git", "-c", "safe.directory=*", "clone", "--no-hardlinks",
                 "--local", "--quiet", str(ROOT), str(path)])
     if res.returncode != 0:
         raise RuntimeError(f"local clone failed: {res.stderr.strip()[:200]}")
-    git("checkout", "--quiet", "--detach", rev, cwd=path)
+    git("checkout", "--detach", sha, cwd=path)
     return path
 
 
@@ -258,25 +260,34 @@ def g3() -> None:
 
 def g4() -> None:
     """No hosted-product promo survives outside the provenance files."""
+    # CHANGELOG.md is upstream's release history, preserved verbatim so the fork
+    # stays traceable. Historical entries describing the hosted product are
+    # provenance, not promotion: nothing there markets anything to a new reader.
+    # rebrand/ is this fork's own tooling — PROMO_MARKERS appear there as the
+    # patterns that detect promo, so it must not flag itself.
+    exempt = {"CHANGELOG.md"}
     offenders = []
     for rel in tracked(BRANCH):
+        if rel in exempt or rel.startswith("rebrand/"):
+            continue
         if not rel.lower().endswith((".md", ".py", ".toml", ".json", ".yml",
                                      ".yaml", ".html", ".txt", ".in", ".mdc")):
             continue
-        body = show(BRANCH, rel)
-        low = body.lower()
+        low = show(BRANCH, rel).lower()
         for marker in PROMO_MARKERS:
             if marker.lower() in low:
                 offenders.append(f"{rel}: {marker}")
     check(not offenders,
-          "zero hosted-product promo references anywhere in the tree"
+          "zero hosted-product promo references outside CHANGELOG history"
           + (f" — {len(offenders)}: {offenders[:6]}" if offenders else ""))
 
-    # The only surviving upstream mentions must be provenance links.
+    # Surviving upstream mentions must be attribution/provenance links only.
     legal = {"NOTICE.md", "LICENSE", "CHANGELOG.md", "TRADEMARKS.md"}
     stray = []
     for rel in tracked(BRANCH):
-        if rel in legal or not rel.lower().endswith((".md", ".toml", ".py")):
+        if rel in legal or rel.startswith("rebrand/"):
+            continue
+        if not rel.lower().endswith((".md", ".toml", ".py")):
             continue
         for i, line in enumerate(show(BRANCH, rel).splitlines(), 1):
             if re.search(r"erpipe", line, re.IGNORECASE) and not (
