@@ -569,10 +569,33 @@ def g16() -> None:
           "sync plan reseats the rebrand branch instead of merging")
 
 
+def g17() -> None:
+    """Authored assets are copied verbatim, not mangled by the identity pass.
+
+    Regression gate for a real defect: ``rebrand/assets/NOTICE.md`` was rewritten
+    by the identity stage before being copied into the tree, so its attribution
+    URL silently pointed at this fork instead of upstream.
+    """
+    assets = Path(__file__).resolve().parent / "assets"
+    for src in sorted(assets.rglob("*")):
+        if not src.is_file() or src.name == "README.head.md":
+            continue
+        rel = src.relative_to(assets).as_posix()
+        expected = src.read_text(encoding="utf-8")
+        actual = show(BRANCH, rel)
+        check(actual == expected,
+              f"{rel} matches its source asset byte-for-byte")
+
+    notice = show(BRANCH, "NOTICE.md")
+    check(notice.count("https://github.com/erpipe-org/mcp-odoo") >= 2,
+          "NOTICE.md attribution URLs still point at upstream")
+    check(FORK_URL in notice, "NOTICE.md states this fork's own URL")
+
+
 GATES = {
     "G1": g1, "G2": g2, "G3": g3, "G4": g4, "G5": g5, "G6": g6, "G7": g7,
     "G8": g8, "G9": g9, "G10": g10, "G11": g11, "G12": g12, "G13": g13,
-    "G14": g14, "G15": g15, "G16": g16,
+    "G14": g14, "G15": g15, "G16": g16, "G17": g17,
 }
 
 

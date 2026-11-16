@@ -4,6 +4,9 @@ CASTADOO MCP is a **modified fork** of the open-source project
 [`erpipe-org/mcp-odoo`](https://github.com/erpipe-org/mcp-odoo) (formerly
 `tuanle96/mcp-odoo`), which is distributed under the MIT License.
 
+- **This fork:** https://github.com/castaso/CASTADOO_MCP
+- **Upstream project:** https://github.com/erpipe-org/mcp-odoo
+
 ## Attribution
 
 - **Upstream project:** https://github.com/erpipe-org/mcp-odoo
