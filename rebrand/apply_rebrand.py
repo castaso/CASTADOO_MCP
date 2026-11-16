@@ -18,14 +18,16 @@ Design rules
 4. Minimal blast radius — Python package name, environment variables, tool
    names, prompt names and resource URIs are deliberately untouched.
 
-Stage order (important, each stage depends on the previous one's invariants):
+Stage order (each stage depends on the previous one's invariants):
 
-    S1 delete upstream-only paths
-    S2 regex identity pass over upstream text files (authored files excluded)
-    S3 surgical, per-file edits that regex cannot express safely
-    S4 promo removal (line-level) on remaining upstream prose
+    S1 delete upstream-only paths (marketing site, publish workflows)
+    S2 regex identity pass over upstream text files
+    S3 surgical per-file edits that regex cannot express safely
+       (pyproject, uv.lock, manifests, CLAUDE.md)
+    S4 promo removal, Markdown only (line deletion must never touch JSON/YAML)
     S5 authored whole-file replacements (README head, LICENSE, NOTICE, ...)
     S6 generated CI workflow + MANIFEST.in augmentation
+    S7 residual scan — any surviving promo token in a structured file aborts
 
 Authored files are written in S5 and are excluded from S2/S4, otherwise the
 promo stripper would delete NOTICE.md's own attribution links.
@@ -39,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -66,6 +69,8 @@ DESCRIPTION = (
     f"{DISPLAY_NAME} for AI agents - 41 tools, gated writes, multi-instance. "
     f"Fork of odoo-mcp (MIT)."
 )
+KEYWORDS = ('["odoo", "mcp", "server", "model-context-protocol", '
+            '"chatgpt", "claude"]')
 
 TEXT_SUFFIXES = {
     ".md", ".py", ".toml", ".json", ".yml", ".yaml", ".html", ".txt",
@@ -79,28 +84,43 @@ AUTHORED = {
     "TRADEMARKS.md",
     "SYNCING.md",
     "CLAUDE.md",
-    "docs/comparison.md",
 }
 
-# Rewritten by dedicated functions; excluded from the blanket regex pass.
-DEDICATED = {"README.md", "CHANGELOG.md", "pyproject.toml", "uv.lock"}
+# Rewritten by dedicated stage-3 functions after the identity pass has run over
+# them; only README/CHANGELOG are excluded from the blanket passes because they
+# are replaced wholesale from assets.
+DEDICATED = {
+    "README.md", "CHANGELOG.md",
+}
 
 # Tooling must never rewrite itself.
-TOOLING = {"rebrand/apply_rebrand.py", "rebrand/verify.py",
-           "rebrand/assets/README.head.md"}
+TOOLING = {
+    "rebrand/apply_rebrand.py", "rebrand/verify.py",
+    "rebrand/hook_pre_push.py", "rebrand/sync_upstream.py",
+    "rebrand/hooks/pre-push", "rebrand/assets/README.head.md",
+}
 
 SKIP_ALL = AUTHORED | DEDICATED | TOOLING | {"GATES.md", "PLAN.md"}
 
 DELETE_PATHS = [
-    "site",
-    ".github/workflows/docker-publish.yml",
-    ".github/workflows/mcp-registry.yml",
-    ".github/workflows/pages.yml",
-    ".github/FUNDING.yml",
+    "site",                                       # upstream marketing deck
+    "docs/comparison.md",                         # competitor/hosted marketing
+    "docs/catalog-submission.md",                 # upstream registry submission notes
+    ".github/workflows/docker-publish.yml",        # publishes upstream's image
+    ".github/workflows/mcp-registry.yml",          # publishes upstream's registry id
+    ".github/workflows/pages.yml",                 # publishes upstream's Pages site
+    ".github/FUNDING.yml",                         # upstream maintainer's funding
+]
+
+# README lines that only exist to point at deleted docs.
+README_DROP_LINES = [
+    "Comparing specific projects?",
+    "| [docs/comparison.md]",
 ]
 
 # ---------------------------------------------------------------------------
 # S2 identity rules. `minimum` > 0 means "must match somewhere or abort".
+# Order matters: composite identifiers must be rewritten before bare tokens.
 # ---------------------------------------------------------------------------
 
 IDENTITY_RULES: list[tuple[str, str, int]] = [
@@ -118,11 +138,22 @@ IDENTITY_RULES: list[tuple[str, str, int]] = [
     (r'"Odoo MCP Server"', f'"{DISPLAY_NAME_SERVER}"', 1),
     (r"Odoo MCP setup", f"{DISPLAY_NAME} setup", 0),
     (r"\bOdoo MCP\b", DISPLAY_NAME, 0),
-    # Bare dist/CLI token last, so composite names above win first.
     (r"\bodoo-mcp\b", DIST_NAME, 1),
 ]
 
-PROMO = re.compile(r"erpipe|odoo erp gateway", re.IGNORECASE)
+# Matches the hosted-product promo. Only applied to Markdown, line by line.
+PROMO = re.compile(r"erpipe", re.IGNORECASE)
+
+# Files allowed to mention upstream by name for legal/provenance reasons.
+PROMO_ALLOWED = {"NOTICE.md", "LICENSE", "CHANGELOG.md", "TRADEMARKS.md"}
+
+# Exact lines that legitimately carry an upstream URL for provenance. These are
+# deliberately narrow: they must match the whole trimmed line, so a stray promo
+# sentence in the same file still fails the residual scan.
+ALLOWED_PROVENANCE_LINES = {
+    'Upstream = "https://github.com/erpipe-org/mcp-odoo"',
+    "Upstream = \"https://github.com/erpipe-org/mcp-odoo\"",
+}
 
 
 def die(msg: str) -> None:
@@ -179,12 +210,9 @@ def stage_delete(root: Path) -> list[str]:
         if not target.exists():
             continue
         if target.is_dir():
-            for child in sorted(target.rglob("*"), reverse=True):
-                if child.is_file():
-                    child.unlink()
-                elif child.is_dir():
-                    child.rmdir()
-            target.rmdir()
+            # shutil handles the Windows quirks (open handles, read-only bits)
+            # that make a manual unlink-then-rmdir walk flaky.
+            shutil.rmtree(target)
         else:
             target.unlink()
         removed.append(rel)
@@ -214,94 +242,152 @@ def stage_identity(root: Path) -> dict[str, int]:
 # S3  surgical per-file edits
 # ---------------------------------------------------------------------------
 
+def _lines(text: str) -> list[str]:
+    return text.split("\n")
+
+
+def _find(lines: list[str], prefix: str, what: str) -> int:
+    for i, line in enumerate(lines):
+        if line.startswith(prefix):
+            return i
+    die(f"could not locate {what} (no line starts with {prefix!r})")
+    raise AssertionError  # unreachable; keeps type checkers happy
+
+
+def _section_bounds(lines: list[str], heading: str) -> tuple[int, int]:
+    """Return [start, end) for a TOML table, end being the next top-level [..]."""
+    try:
+        start = lines.index(heading)
+    except ValueError:
+        die(f"pyproject.toml: table {heading!r} not found")
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i].startswith("["):
+            end = i
+            break
+    return start, end
+
+
+def _replace_key_line(lines: list[str], prefix: str, new_line: str, what: str) -> None:
+    """Replace a single-line key, e.g. ``name = "..."``."""
+    i = _find(lines, prefix, what)
+    lines[i] = new_line
+
+
+def _replace_multiline_array(lines: list[str], prefix: str, body: list[str],
+                             what: str) -> None:
+    """Replace a TOML array that starts on `prefix` and closes on a lone `]`."""
+    start = _find(lines, prefix, what)
+    end = None
+    for i in range(start, len(lines)):
+        if lines[i].rstrip() == "]":
+            end = i
+            break
+    if end is None:
+        die(f"could not find the closing ']' of {what}")
+    lines[start:end + 1] = body
+
+
 def stage_pyproject(root: Path) -> None:
     path = root / "pyproject.toml"
-    text = read_text(path)
+    lines = _lines(read_text(path))
 
-    def sub(pattern: str, replacement: str, what: str, flags=re.MULTILINE) -> None:
-        nonlocal text
-        new, n = re.subn(pattern, lambda _m: replacement, text, flags=flags)
-        if n == 0:
-            die(f"pyproject.toml: could not locate {what} ({pattern!r})")
-        text = new
+    project_start, project_end = _section_bounds(lines, "[project]")
+    # Work only inside [project] so nothing outside it can be clobbered.
+    head, body, tail = (
+        lines[:project_start],
+        lines[project_start:project_end],
+        lines[project_end:],
+    )
 
-    sub(r'^name = "[^"]+"$', f'name = "{DIST_NAME}"', 'project name')
-    sub(r'^description = .+$',
-        f'description = "{DESCRIPTION}"', 'project description')
-    sub(r'^keywords = \[.*?\]$',
-        'keywords = ["odoo", "mcp", "server", "model-context-protocol", '
-        '"chatgpt", "claude"]',
-        'keywords', flags=re.MULTILINE | re.DOTALL)
-    sub(r'^authors = \[.*?^\]$',
-        f'authors = [\n    {{name = "{HOLDER}"}}\n]',
-        'authors', flags=re.MULTILINE | re.DOTALL)
-    sub(r'^\[project\.urls\]\n(?:[^\[].*\n|\n)*',
-        "\n".join([
-            "[project.urls]",
-            f'Homepage = "{FORK_URL}#readme"',
-            f'Source = "{FORK_URL}"',
-            f'Documentation = "{FORK_URL}#readme"',
-            f'Changelog = "{FORK_URL}/blob/main/CHANGELOG.md"',
-            f'Issues = "{FORK_URL}/issues"',
-            f'Upstream = "{UPSTREAM_URL}"',
-            "",
-        ]),
-        'project urls')
-    sub(r'^odoo-mcp = "odoo_mcp\.__main__:main"$',
-        f'{DIST_NAME} = "odoo_mcp.__main__:main"', 'console script')
+    _replace_key_line(body, "name = ", f'name = "{DIST_NAME}"', "project name")
+    _replace_key_line(body, "description = ", f'description = "{DESCRIPTION}"',
+                      "project description")
+    _replace_key_line(body, "keywords = ", f"keywords = {KEYWORDS}",
+                      "project keywords")
+    _replace_multiline_array(
+        body, "authors = ", [f"authors = [", f'    {{name = "{HOLDER}"}}', "]"],
+        "project authors",
+    )
+    # `license = "MIT"` and requires-python are intentionally left untouched.
 
-    write_text(path, text)
+    lines = head + body + tail
+
+    # [project.urls]: replace the whole table, keeping no upstream marketing URLs.
+    start, end = _section_bounds(lines, "[project.urls]")
+    lines[start:end] = [
+        "[project.urls]",
+        f'Homepage = "{FORK_URL}#readme"',
+        f'Source = "{FORK_URL}"',
+        f'Documentation = "{FORK_URL}#readme"',
+        f'Changelog = "{FORK_URL}/blob/main/CHANGELOG.md"',
+        f'Issues = "{FORK_URL}/issues"',
+        f'Upstream = "{UPSTREAM_URL}"',
+        "",
+    ]
+
+    # [project.scripts]: the console script is the visible CLI name.
+    scripts_start, scripts_end = _section_bounds(lines, "[project.scripts]")
+    lines[scripts_start:scripts_end] = [
+        "[project.scripts]",
+        f'{DIST_NAME} = "odoo_mcp.__main__:main"',
+        "",
+    ]
+
+    write_text(path, "\n".join(lines))
 
 
 def stage_uv_lock(root: Path) -> None:
     path = root / "uv.lock"
     text = read_text(path)
     # Only the root project entry carries the distributable name; dependency
-    # entries and their hashes must stay untouched.
-    new, n = re.subn(r'^name = "odoo-mcp"$', f'name = "{DIST_NAME}"',
+    # entries and their hashes must stay untouched. Tolerant of both spellings
+    # because the identity pass may already have rewritten it.
+    new, n = re.subn(r'^name = "(?:odoo-mcp|castadoo-mcp)"$',
+                     f'name = "{DIST_NAME}"', text, count=1, flags=re.MULTILINE)
+    if n != 1:
+        die('uv.lock: root project `name = "..."` entry not found')
+    write_text(path, new)
+
+
+def _set_json_string(root: Path, rel: str, key: str, value: str) -> None:
+    """Replace a top-level JSON string field, preserving the rest byte-for-byte."""
+    path = root / rel
+    if not path.exists():
+        die(f"{rel} missing; upstream renamed or removed it")
+    text = read_text(path)
+    pattern = rf'^(  "{re.escape(key)}": )".*?"(,?)$'
+    new, n = re.subn(pattern, lambda m: f'{m.group(1)}"{value}"{m.group(2)}',
                      text, count=1, flags=re.MULTILINE)
     if n != 1:
-        die('uv.lock: root `name = "odoo-mcp"` entry not found')
+        die(f"{rel}: could not replace field {key!r}")
     write_text(path, new)
 
 
 def stage_manifests(root: Path) -> None:
-    """Manifest files where promotion lives in dedicated keys."""
-    server = root / "server.json"
-    if server.exists():
-        text = read_text(server)
-        text = re.sub(r'^  "description": .+$',
-                      f'  "description": "{DISPLAY_NAME}: gated writes, '
-                      f'multi-instance, 41 tools. Fork of odoo-mcp (MIT)."',
-                      text, count=1, flags=re.MULTILINE)
-        write_text(server, text)
-
-    mcpb = root / "mcpb" / "manifest.template.json"
-    if mcpb.exists():
-        text = read_text(mcpb)
-        text = re.sub(
-            r'^  "description": .+$',
-            f'  "description": "Talk to any Odoo 16+ database with zero '
-            f'Odoo-side setup. Local stdio MCP, 41 tools, gated writes. '
-            f'Fork of odoo-mcp (MIT). Requires uv."',
-            text, count=1, flags=re.MULTILINE)
-        text = re.sub(
-            r'^  "long_description": .+$',
-            f'  "long_description": "{DISPLAY_NAME} turns any Odoo 16+ database '
-            f'into a Model Context Protocol server using only your existing '
-            f'credentials - no App Store module, no admin access. 41 tools: '
-            f'bounded reads, server-side aggregation, schema discovery, '
-            f'diagnostics, migration helpers, local BM25 knowledge search, '
-            f'accounting reports, cross-instance fan-out, and a gated write '
-            f'workflow with approval tokens and an audit trail. Speaks XML-RPC '
-            f'for Odoo 16-18 and External JSON-2 for Odoo 19+. A branding fork '
-            f'of odoo-mcp (MIT); see NOTICE.md."',
-            text, count=1, flags=re.MULTILINE)
-        text = re.sub(
-            r'^  "author": \{\n(?:.*\n)*?  \},?$',
-            f'  "author": {{\n    "name": "{HOLDER}",\n    "url": "{FORK_URL}"\n  }},',
-            text, count=1, flags=re.MULTILINE)
-        write_text(mcpb, text)
+    _set_json_string(
+        root, "server.json", "description",
+        f"{DISPLAY_NAME}: gated writes, multi-instance, 41 tools. "
+        f"Fork of odoo-mcp (MIT).",
+    )
+    _set_json_string(
+        root, "mcpb/manifest.template.json", "description",
+        "Talk to any Odoo 16+ database with zero Odoo-side setup. Local stdio "
+        "MCP, 41 tools, gated writes. Fork of odoo-mcp (MIT). Requires uv.",
+    )
+    _set_json_string(
+        root, "mcpb/manifest.template.json", "long_description",
+        f"{DISPLAY_NAME} turns any Odoo 16+ database into a Model Context "
+        f"Protocol server using only your existing credentials - no App Store "
+        f"module, no admin access. 41 tools: bounded reads, server-side "
+        f"aggregation, schema discovery, diagnostics, migration helpers, local "
+        f"BM25 knowledge search, accounting reports, cross-instance fan-out, "
+        f"and a gated write workflow with approval tokens and an audit trail. "
+        f"Speaks XML-RPC for Odoo 16-18 and External JSON-2 for Odoo 19+. A "
+        f"branding fork of odoo-mcp (MIT); see NOTICE.md.",
+    )
+    _set_json_string(root, "mcpb/manifest.template.json", "display_name",
+                     DISPLAY_NAME)
 
     glama = root / "glama.json"
     if glama.exists():
@@ -312,40 +398,29 @@ def stage_manifests(root: Path) -> None:
 
 
 def stage_claude_md(root: Path) -> None:
-    (root / "CLAUDE.md").write_text(CLAUDE_MD, encoding="utf-8", newline="\n")
+    write_text(root / "CLAUDE.md", CLAUDE_MD)
 
 
 # ---------------------------------------------------------------------------
-# S4  promo removal
+# S4  promo removal — Markdown only
 # ---------------------------------------------------------------------------
-
-TABLE_SEP = re.compile(r"^\s*\|(?:\s*:?-{2,}:?\s*\|)+\s*$")
-
 
 def stage_promo(root: Path) -> list[str]:
-    """Drop lines that only exist to advertise the upstream hosted product."""
+    """Drop Markdown lines that only advertise the upstream hosted product.
+
+    Restricted to ``.md``: deleting single lines inside JSON/YAML/TOML would
+    produce syntactically broken files. Structured files are handled by the
+    dedicated stage-3 functions and checked again in S7.
+    """
     touched = []
     for rel, path in iter_text_files(root):
+        if not rel.endswith(".md"):
+            continue
         text = read_text(path)
         if not PROMO.search(text):
             continue
-        lines = text.split("\n")
-        kept: list[str] = []
-        for line in lines:
-            if PROMO.search(line):
-                continue
-            kept.append(line)
-        # Remove table separator rows orphaned by the deletions above.
-        cleaned: list[str] = []
-        for i, line in enumerate(kept):
-            if TABLE_SEP.match(line):
-                prev = cleaned[-1] if cleaned else ""
-                nxt_idx = i + 1
-                nxt = kept[nxt_idx] if nxt_idx < len(kept) else ""
-                if not prev.lstrip().startswith("|") and not nxt.lstrip().startswith("|"):
-                    continue
-            cleaned.append(line)
-        out = "\n".join(cleaned)
+        kept = [line for line in text.split("\n") if not PROMO.search(line)]
+        out = "\n".join(kept)
         out = re.sub(r"\n{3,}", "\n\n", out)
         if out != text:
             write_text(path, out)
@@ -372,16 +447,28 @@ def stage_assets(root: Path) -> list[str]:
 def stage_readme(root: Path) -> None:
     path = root / "README.md"
     text = read_text(path)
-    head = (Path(__file__).resolve().parent / "assets" / "README.head.md").read_text(
-        encoding="utf-8"
-    )
     marker = "## Highlights"
     idx = text.find(marker)
     if idx == -1:
         die("README.md: anchor '## Highlights' not found; upstream restructured it")
-    text = head.rstrip("\n") + "\n\n" + text[idx:]
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    write_text(path, text)
+
+    # Strip promo lines from UPSTREAM's body only. Doing this before the head is
+    # prepended keeps the authored block intact: it legitimately cites the
+    # upstream URL in its provenance paragraph.
+    body_lines = []
+    for line in text[idx:].split("\n"):
+        if any(line.strip().startswith(p) for p in README_DROP_LINES):
+            continue
+        if PROMO.search(line):
+            continue
+        body_lines.append(line)
+    body = "\n".join(body_lines)
+    body = re.sub(r"\n{3,}", "\n\n", body)
+
+    head = (Path(__file__).resolve().parent / "assets" / "README.head.md").read_text(
+        encoding="utf-8"
+    )
+    write_text(path, head.rstrip("\n") + "\n\n" + body)
 
 
 def stage_changelog(root: Path) -> None:
@@ -429,6 +516,34 @@ def stage_manifest_in(root: Path) -> None:
     write_text(path, text)
 
 
+# ---------------------------------------------------------------------------
+# S7  residual scan
+# ---------------------------------------------------------------------------
+
+def stage_residual(root: Path) -> None:
+    """Any surviving promo token outside the legal files is a rule gap."""
+    offenders = []
+    for rel, path in iter_text_files(root):
+        if rel in PROMO_ALLOWED:
+            continue
+        for lineno, line in enumerate(read_text(path).split("\n"), 1):
+            if line.strip() in ALLOWED_PROVENANCE_LINES:
+                continue
+            if PROMO.search(line):
+                offenders.append(f"{rel}:{lineno}: {line.strip()[:90]}")
+    if offenders:
+        die(
+            "upstream promo tokens survive in non-Markdown or authored-exempt "
+            "files:\n  " + "\n  ".join(sorted(offenders))
+            + "\nAdd an explicit rule in stage 3 (and a case in the verifier) "
+              "instead of relying on line deletion."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Static content
+# ---------------------------------------------------------------------------
+
 CLAUDE_MD = f"""\
 # CLAUDE.md
 
@@ -448,14 +563,14 @@ distribution. The functional code is upstream's.
 git checkout -B rebrand/CASTADOO_MCP upstream/main
 git checkout tooling/rebrand -- rebrand/
 python rebrand/apply_rebrand.py
-git add -A && git commit -m "chore(rebrand): ... {GENERATED_MARKER}"
+git add -A && git commit -m "chore(rebrand): overlay from upstream@<sha> {GENERATED_MARKER}"
 ```
 
 Any change you want in the fork belongs in `rebrand/apply_rebrand.py` or
 `rebrand/assets/` on `tooling/rebrand`, then regenerate. Editing the branch
 directly guarantees a conflict on the next upstream sync, which is the exact
-problem this structure exists to prevent. `rebrand/verify.py` and the
-pre-push hook both fail if the branch is not reproducible.
+problem this structure exists to prevent. `rebrand/verify.py` and the pre-push
+hook both fail if the branch is not reproducible.
 
 ## Branches
 
@@ -485,7 +600,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and
 [docs/adding-a-tool.md](docs/adding-a-tool.md) for upstream's workflow.
 Never bypass the gated write workflow or the field-ACL choke points.
 """
-
 
 CI_WORKFLOW = """\
 name: CI
@@ -555,16 +669,27 @@ def apply(root: Path) -> None:
     if not (root / "pyproject.toml").exists():
         die(f"{root} does not look like a repo root (no pyproject.toml)")
 
+    # Detect a tree the overlay has already been applied to. On such a tree the
+    # upstream anchors are intentionally gone, so the required-anchor assertions
+    # must be skipped; every stage below is written to be a no-op in that case,
+    # which is what makes a repeated run provably inert.
+    already_rebranded = f'name = "{DIST_NAME}"' in read_text(root / "pyproject.toml")
+
     removed = stage_delete(root)
     hits = stage_identity(root)
 
-    for pattern, _, minimum in IDENTITY_RULES:
-        if minimum and hits.get(pattern, 0) < minimum:
-            die(
-                f"required rule never matched (expected >= {minimum}): {pattern!r}\n"
-                f"  Upstream probably changed shape. Fix the rule in "
-                f"rebrand/apply_rebrand.py - do NOT edit the rebrand branch."
-            )
+    if not already_rebranded:
+        for pattern, _, minimum in IDENTITY_RULES:
+            if minimum and hits.get(pattern, 0) < minimum:
+                die(
+                    f"required rule never matched (expected >= {minimum}): "
+                    f"{pattern!r}\n  Upstream probably changed shape. Fix the "
+                    f"rule in rebrand/apply_rebrand.py - do NOT edit the "
+                    f"rebrand branch."
+                )
+    else:
+        print("apply_rebrand: tree already rebranded; anchor checks skipped "
+              "(stages run as no-ops to prove idempotency)")
 
     stage_pyproject(root)
     stage_uv_lock(root)
@@ -576,6 +701,7 @@ def apply(root: Path) -> None:
     stage_changelog(root)
     stage_ci(root)
     stage_manifest_in(root)
+    stage_residual(root)
 
     print(f"apply_rebrand: removed {len(removed)} path(s): "
           f"{', '.join(removed) or '(none)'}")
@@ -584,8 +710,8 @@ def apply(root: Path) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", default=".", help="repo root (default: cwd)")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="skip the pristine-tree guard (used by the verifier)")
