@@ -202,13 +202,30 @@ def verify_venv_python() -> Path:
         return _venv_py
 
     venv = ROOT / ".verify-venv"
-    shutil.rmtree(venv, ignore_errors=True)
-
     py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    create = _run(["uv", "venv", "--python", "3.11", str(venv)], cwd=ROOT)
-    if create.returncode != 0 or not py.exists():
-        bad(f"could not create verification venv: {create.stderr.strip()[:160]}")
-        raise SystemExit(1)
+
+    def _venv_healthy(candidate: Path) -> bool:
+        return _run([str(candidate), "-c", "import sys; print(sys.version)"]).returncode == 0
+
+    # Reuse an existing, working venv when possible. Only rebuild when it is
+    # missing or broken: deleting a venv that a previous process still holds
+    # open fails on Windows, so recreation is the last resort rather than the
+    # default.
+    if not (py.exists() and _venv_healthy(py)):
+        shutil.rmtree(venv, ignore_errors=True)
+        if venv.exists():
+            # uv refuses to create over an existing directory. Rename it out of
+            # the way instead; the leftover is garbage-collected by the OS.
+            try:
+                venv.rename(venv.with_name(f".verify-venv-stale-{uuid.uuid4().hex[:6]}"))
+            except OSError:
+                pass
+        create = _run(["uv", "venv", "--python", "3.11", str(venv)], cwd=ROOT)
+        if create.returncode != 0 or not py.exists():
+            detail = (create.stderr or create.stdout).strip().splitlines()[-3:]
+            bad("could not create verification venv: " + " | ".join(detail))
+            raise SystemExit(1)
+
     _venv_py = py
     return py
 
