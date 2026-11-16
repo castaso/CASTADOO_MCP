@@ -54,6 +54,7 @@ KNOWN_UPSTREAM_FAILURES = {
 failures: list[str] = []
 _rebrand_clone: Path | None = None
 _venv_py: Path | None = None
+_installed: dict[tuple[str, str], bool] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -188,18 +189,26 @@ def drop_clone(path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def verify_venv_python() -> Path:
-    """Interpreter with the project's deps installed, built once per run."""
+    """Interpreter with the project's deps installed, built once per run.
+
+    A *fresh* venv is created for each verification run. Reusing one across runs
+    is not safe on Windows: reinstalling the project into a venv that previous
+    runs still reference intermittently fails with ``failed to remove directory
+    ... Access is denied (os error 5)``, which would make the gates flaky for
+    reasons that have nothing to do with the rebrand.
+    """
     global _venv_py
     if _venv_py and _venv_py.exists():
         return _venv_py
 
     venv = ROOT / ".verify-venv"
+    shutil.rmtree(venv, ignore_errors=True)
+
     py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    if not py.exists():
-        create = _run(["uv", "venv", "--python", "3.11", str(venv)], cwd=ROOT)
-        if create.returncode != 0:
-            bad(f"could not create verification venv: {create.stderr.strip()[:160]}")
-            raise SystemExit(1)
+    create = _run(["uv", "venv", "--python", "3.11", str(venv)], cwd=ROOT)
+    if create.returncode != 0 or not py.exists():
+        bad(f"could not create verification venv: {create.stderr.strip()[:160]}")
+        raise SystemExit(1)
     _venv_py = py
     return py
 
@@ -207,23 +216,32 @@ def verify_venv_python() -> Path:
 def install_into(py: Path, source: Path) -> bool:
     """Install the project (editable, with dev extras) into the verify venv.
 
-    ``uv venv`` creates an environment without ``pip``, so pip is only a
-    fallback; uv is the documented and reliable path. On failure the tail of the
-    output is reported, because the head is just uv's preamble.
+    ``uv venv`` creates an environment without ``pip``, so uv is the primary
+    path and pip the fallback. Installs are cached per (interpreter, source):
+    repeating the same editable install into a live venv is what triggers the
+    Windows ``Access is denied (os error 5)`` uninstall race, and it is pure
+    waste anyway — gates G10 and G11 deliberately share one clone.
     """
+    global _installed
+    key = (str(py), str(source))
+    if key in _installed:
+        return _installed[key]
+
     uv = _run(["uv", "pip", "install", "--python", str(py), "-e", f"{source}[dev]"],
               cwd=source, timeout=1800)
-    if uv.returncode == 0:
-        return True
+    ok_install = uv.returncode == 0
+    if not ok_install:
+        pip = _run([str(py), "-m", "pip", "install", "-q", "-e", f"{source}[dev]"],
+                   cwd=source, timeout=1800)
+        ok_install = pip.returncode == 0
+        if not ok_install:
+            detail = (pip.stderr or uv.stderr or uv.stdout or "").strip().splitlines()[-6:]
+            bad("dependency install failed: " + " | ".join(detail))
+            _installed[key] = False
+            return False
 
-    pip = _run([str(py), "-m", "pip", "install", "-q", "-e", f"{source}[dev]"],
-               cwd=source, timeout=1800)
-    if pip.returncode == 0:
-        return True
-
-    detail = (uv.stderr or uv.stdout or "").strip().splitlines()[-6:]
-    bad("dependency install failed: " + " | ".join(detail))
-    return False
+    _installed[key] = True
+    return True
 
 
 # ---------------------------------------------------------------------------
