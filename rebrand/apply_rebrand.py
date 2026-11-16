@@ -102,6 +102,14 @@ TOOLING_PREFIX = "rebrand/"
 
 SKIP_ALL = AUTHORED | DEDICATED | {"GATES.md", "PLAN.md"}
 
+# Directory names that are never part of the source tree. They hold third-party
+# code (or generated artefacts) whose contents must not influence the rebrand.
+VENDORED_DIRS = {
+    ".git", ".venv", "venv", "env", ".verify-venv", "node_modules",
+    "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+    "build", "dist", ".eggs", "site-packages",
+}
+
 DELETE_PATHS = [
     "site",                                       # upstream marketing deck
     "docs/comparison.md",                         # competitor/hosted marketing
@@ -190,6 +198,11 @@ def iter_text_files(root: Path):
             continue
         rel = path.relative_to(root).as_posix()
         if rel.startswith(".git/") or "/.git/" in rel:
+            continue
+        # Any virtualenv / build / cache directory is not part of the source
+        # tree. Scanning it would read third-party packages and produce
+        # meaningless rule hits (and very slow runs).
+        if any(part in VENDORED_DIRS for part in rel.split("/")[:-1]):
             continue
         if rel.startswith(TOOLING_PREFIX):
             continue
@@ -536,6 +549,24 @@ def stage_manifest_in(root: Path) -> None:
     write_text(path, text)
 
 
+def stage_gitignore(root: Path) -> None:
+    """Ignore the local verification venv created by rebrand/verify.py."""
+    path = root / ".gitignore"
+    if not path.exists():
+        return
+    text = read_text(path)
+    entry = ".verify-venv/"
+    if entry in text:
+        return  # idempotent
+    if not text.endswith("\n"):
+        text += "\n"
+    text += (
+        "\n# Local verification venv created by rebrand/verify.py\n"
+        f"{entry}\n"
+    )
+    write_text(path, text)
+
+
 # ---------------------------------------------------------------------------
 # S7  residual scan
 # ---------------------------------------------------------------------------
@@ -721,6 +752,7 @@ def apply(root: Path) -> None:
     stage_changelog(root)
     stage_ci(root)
     stage_manifest_in(root)
+    stage_gitignore(root)
     stage_residual(root)
 
     print(f"apply_rebrand: removed {len(removed)} path(s): "
