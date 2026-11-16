@@ -40,8 +40,10 @@ Usage
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -203,6 +205,20 @@ def iter_text_files(root: Path):
 # S1
 # ---------------------------------------------------------------------------
 
+def _force_remove(func, path, _exc):  # noqa: ANN001  (shutil callbacks are untyped)
+    """Clear the read-only bit, then retry the failing shutil operation.
+
+    Git checkouts on Windows leave directories carrying the ReadOnly attribute,
+    which makes ``rmdir`` fail with WinError 5 ("Access is denied"). The
+    attribute is a file-system state, not a permission the user lacks.
+    """
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except OSError:
+        raise
+
+
 def stage_delete(root: Path) -> list[str]:
     removed = []
     for rel in DELETE_PATHS:
@@ -210,11 +226,15 @@ def stage_delete(root: Path) -> list[str]:
         if not target.exists():
             continue
         if target.is_dir():
-            # shutil handles the Windows quirks (open handles, read-only bits)
-            # that make a manual unlink-then-rmdir walk flaky.
-            shutil.rmtree(target)
+            if sys.version_info >= (3, 12):
+                shutil.rmtree(target, onexc=_force_remove)
+            else:  # pragma: no cover - Python 3.10/3.11 path
+                shutil.rmtree(target, onerror=lambda f, p, e: _force_remove(f, p, e))
         else:
-            target.unlink()
+            try:
+                target.unlink()
+            except PermissionError:
+                _force_remove(Path.unlink, target, None)
         removed.append(rel)
     return removed
 
