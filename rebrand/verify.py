@@ -143,10 +143,20 @@ def clone_at(rev: str) -> Path:
     """
     sha = git("rev-parse", "--verify", rev).strip()
     path = _temp_root()
-    res = _run(["git", "-c", "safe.directory=*", "clone", "--no-hardlinks",
-                "--local", "--quiet", str(ROOT), str(path)])
-    if res.returncode != 0:
-        raise RuntimeError(f"local clone failed: {res.stderr.strip()[:200]}")
+
+    last = ""
+    for attempt in range(4):
+        res = _run(["git", "-c", "safe.directory=*", "clone", "--no-hardlinks",
+                    "--local", "--quiet", str(ROOT), str(path)])
+        if res.returncode == 0:
+            break
+        last = res.stderr.strip()
+        # A partially created target blocks all retries; clear it and back off.
+        shutil.rmtree(path, ignore_errors=True)
+        time.sleep(0.5 * (attempt + 1))
+    else:
+        raise RuntimeError(f"local clone failed: {last[:200]}")
+
     git("checkout", "--detach", sha, cwd=path, retries=3)
     return path
 
