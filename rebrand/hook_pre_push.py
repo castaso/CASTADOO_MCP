@@ -63,10 +63,15 @@ def guard(remote: str, local_ref: str, local_sha: str) -> tuple[bool, str]:
         )
 
     # Prefer the range since the remote-tracking base; that is what is actually
-    # being introduced. Fall back to the single tip commit for a first push.
+    # being introduced. With no base (first push of the branch) fall back to
+    # "commits not already on any origin branch", which excludes upstream
+    # history and yields exactly the generated commits being introduced.
     base = rev_parse(f"refs/remotes/{remote}/{BRANCH_NAME}")
-    rng = f"{base}..{local_sha}" if base else local_sha
-    shas = [ln.strip() for ln in git("rev-list", rng).splitlines() if ln.strip()]
+    if base:
+        rng_args = [f"{base}..{local_sha}"]
+    else:
+        rng_args = [local_sha, "--not", f"--remotes={remote}"]
+    shas = [ln.strip() for ln in git("rev-list", *rng_args).splitlines() if ln.strip()]
     if not shas:
         return True, ""          # nothing new to introduce
 
@@ -157,6 +162,18 @@ def self_test() -> int:
         passed, msg = guard("origin", BRANCH, "b" * 40)
         results.append((not passed and "cannot resolve" in msg,
                         "unresolvable sha fails closed"))
+
+        # 7. FIRST PUSH: no remote base. The guard must judge only the commits
+        #    being introduced, not the whole upstream history behind them.
+        #    (Regression: it used to walk all of history and refuse.)
+        subprocess.run(["git", "update-ref", "-d",
+                        f"refs/remotes/origin/{BRANCH_NAME}"], check=False)
+        tip = good
+        shas = [ln.strip() for ln in git("rev-list", tip, "--not",
+                                         "--remotes=origin").splitlines() if ln.strip()]
+        only_introduced = all(commit_has_marker(s) for s in shas)
+        results.append((only_introduced and bool(shas),
+                        "first push evaluates only the introduced commit(s)"))
     finally:
         os.chdir(original)
         subprocess.run(["git", "-C", str(tmp), "config", "gc.auto", "0"],
