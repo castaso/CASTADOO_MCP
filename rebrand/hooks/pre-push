@@ -1,0 +1,27 @@
+#!/bin/sh
+# Git pre-push hook shim.
+#
+# Delegates to rebrand/hook_pre_push.py, which refuses to push hand-edited
+# commits to the generated rebrand branch. Installed by:
+#     git config core.hooksPath rebrand/hooks
+#
+# Windows note: python3 may not exist on PATH; fall back to python.
+
+set -u
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+hook="$repo_root/rebrand/hook_pre_push.py"
+
+if [ ! -f "$hook" ]; then
+  echo "pre-push: $hook not found; skipping rebrand guard" >&2
+  exit 0
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 "$hook" "$@"
+elif command -v python >/dev/null 2>&1; then
+  exec python "$hook" "$@"
+else
+  echo "pre-push: no python interpreter found; skipping rebrand guard" >&2
+  exit 0
+fi
